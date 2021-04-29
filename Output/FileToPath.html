@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <!-- Basic Page Needs
+    ================================================== -->
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Mobile Specific Metas
+    ================================================== -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    <!-- Favicons
+    ================================================== -->
+    <link rel="icon" href="img/favicon/favicon-32x32.png" type="image/x-icon" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="img/favicon/favicon-144x144.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="img/favicon/favicon-72x72.png">
+    <link rel="apple-touch-icon-precomposed" href="img/favicon/favicon-54x54.png">
+
+    <!-- CSS
+    ================================================== -->
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="./css/bootstrap.min.css">
+    <!-- Template styles-->
+    <link rel="stylesheet" href="./css/style.css">
+
+    <link rel="stylesheet" href="./css/tableWrapper.css">
+    <!-- Responsive styles-->
+    <link rel="stylesheet" href="./css/responsive.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="./css/font-awesome.min.css">
+    <!-- Animation -->
+    <link rel="stylesheet" href="./css/animate.css">
+    <!-- Prettyphoto -->
+    <link rel="stylesheet" href="./css/prettyPhoto.css">
+    <!-- Owl Carousel -->
+    <link rel="stylesheet" href="./css/owl.carousel.css">
+    <link rel="stylesheet" href="./css/owl.theme.css">
+    <!-- Flexslider -->
+    <link rel="stylesheet" href="./css/flexslider.css">
+    <!-- Flexslider -->
+    <link rel="stylesheet" href="./css/cd-hero.css">
+    <!-- Style Swicther -->
+    <link id="style-switch" href="./css/presets/preset3.css" media="screen" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements. All other JS at the end of file. -->
+    <!--[if lt IE 9]>
+    <script src="js/html5shiv.js"></script>
+    <script src="js/respond.min.js"></script>
+
+    <script src="./tablefilter/tablefilter.js"></script>
+    base_path: './tablefilter/',-->
+
+
+
+</head>
+
+<body>
+<div class="body-inner">
+    <!-- Header start -->
+    <header id="header" class="navbar-fixed-top header" role="banner">
+        <div class="container">
+            <div class="row">
+                <!-- Logo start -->
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                </div><!--/ Logo end -->
+                <nav class="collapse navbar-collapse clearfix" role="navigation">
+                    <ul class="nav navbar-nav navbar-right">
+<!--                        <li><a href="./index.html"><p class="text-danger">Home</p></a></li>-->
+                    </ul>
+                </nav><!--/ Navigation end -->
+            </div><!--/ Row end -->
+        </div><!--/ Container end -->
+    </header><!--/ Header end -->
+
+
+
+    <section id="main-container">
+        <div class="container">
+
+            <!-- Company Profile -->
+            <div class="row">
+                <div class="col-md-12 heading">
+                    <span class="title-icon classic pull-left"><i class="fa fa-suitcase"></i></span>
+                    <h2 class="title classic">Mapping Summary for (java.io.File, java.nio.file.Path)</h2>
+                </div>
+            </div><!-- Title row end -->
+            <div id="table-wrapper">
+                <div id="table-scroll">
+                    <table class="table table-dark" id="foo">
+                        <thead>
+                        <tr>
+                            
+                            <th scope="col">Match</th>
+                            
+                            <th scope="col">Replace</th>
+                            
+                            <th scope="col">Instances</th>
+                            
+                            <th scope="col">Commits</th>
+                            
+                            <th scope="col">Project</th>
+                            
+                            <th scope="col">Link</th>
+                            
+                        </tr>
+                        </thead>
+                        
+                        <tr>
+                            
+                               <td>new File(:[2x1],\"src/main/java/org/MyFoo.java\")</td>
+                            
+                               <td>:[2x1].toPath()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-0.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new FileInputStream(:[2])</td>
+                            
+                               <td>Files.newInputStream(:[2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-1.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getName()</td>
+                            
+                               <td>:[9x2].getFileName().toString()</td>
+                            
+                               <td>6</td>
+                            
+                               <td>4</td>
+                            
+                               <td>4</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-2.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getPath()</td>
+                            
+                               <td>:[9x2].toString()</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-3.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>resolvedAddress.getPort()</td>
+                            
+                               <td>port</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-4.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>resolver.resolveDependency(PageCache.class)</td>
+                            
+                               <td>pageCache</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-5.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsolutePath()</td>
+                            
+                               <td>:[9x2].toAbsolutePath().toString()</td>
+                            
+                               <td>8</td>
+                            
+                               <td>4</td>
+                            
+                               <td>4</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-6.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>File.createTempFile(:[11x1],\"dir\")</td>
+                            
+                               <td>Files.createTempDirectory(:[11x1])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-7.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>Assert.assertEquals(\"Remote address \" + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + \" Code 200 test-header v1\n\",FileUtils.readFile(logFileName))</td>
+                            
+                               <td>Assert.assertFalse(Files.exists(logFileName))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-8.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new FileResource(:[2x1],:[2x2],:[2x3])</td>
+                            
+                               <td>new PathResource(:[2x1],:[2x2],:[2x3])</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-9.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,\"innerDir\")).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,\"innerDir\")).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-10.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].canWrite()</td>
+                            
+                               <td>Files.isWritable(:[9x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-11.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].length()</td>
+                            
+                               <td>Files.size(:[9x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-12.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].mkdirs()</td>
+                            
+                               <td>Files.exists(:[9x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-13.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>fileSystem.deleteRecursively(:[11])</td>
+                            
+                               <td>FileUtils.deletePathRecursively(:[11])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-14.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getCanonicalPath()</td>
+                            
+                               <td>:[9x2].toString()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-15.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x3]].accepts(:[9x5]).withRequiredArg(:[9x7]).ofType(File.class)</td>
+                            
+                               <td>:[9x3].accepts(:[9x5]).withRequiredArg(:[9x7]).withValuesConvertedBy(new PathConverter())</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-16.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>fromAddress.getPort()</td>
+                            
+                               <td>port</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-17.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,\"/\")).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,\"/\")).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-18.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x3]].resolve(:[9x5]).toFile()</td>
+                            
+                               <td>:[9x3].resolve(:[9x5])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-19.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]definition.getBaseDir()</td>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]initBaseDir(definition)</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-20.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>File.createTempFile(:[11x1],:[11x2],hostConfigFile.getAbsoluteFile().getParentFile())</td>
+                            
+                               <td>Files.createTempFile(hostConfigFile.toPath().getParent(),:[11x1],:[11x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-21.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(rootPath,10485760)).setDirectoryListingEnabled(true))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(rootPath,10485760)).setDirectoryListingEnabled(true))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-22.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>Paths.get(file.getAbsolutePath())</td>
+                            
+                               <td>file</td>
+                            
+                               <td>3</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-23.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x3]].acceptsAll(:[9x5]).withRequiredArg(:[9x7]).ofType(File.class)</td>
+                            
+                               <td>:[9x3].acceptsAll(:[9x5]).withRequiredArg(:[9x7]).withValuesConvertedBy(new PathConverter())</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-24.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getTmpDir()</td>
+                            
+                               <td>:[9x2].getWebUiDir()</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-25.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].exists()</td>
+                            
+                               <td>Files.exists(:[9x2])</td>
+                            
+                               <td>11</td>
+                            
+                               <td>6</td>
+                            
+                               <td>5</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-26.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].canRead()</td>
+                            
+                               <td>Files.isReadable(:[9x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-27.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>Assert.assertFalse(logFileName.exists())</td>
+                            
+                               <td>Assert.assertEquals(\"Remote address \" + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + \" Code 200 test-header v2\n\",new String(Files.readAllBytes(logFileName)))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-28.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].toPath()</td>
+                            
+                               <td>:[9x2].getRoot()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-29.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getName()</td>
+                            
+                               <td>:[9x2].getFileName()</td>
+                            
+                               <td>9</td>
+                            
+                               <td>3</td>
+                            
+                               <td>2</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-30.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/innerSymlink\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,rootPath.toAbsolutePath().toString().concat(\"/innerSymlink\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-31.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>file.listFiles()</td>
+                            
+                               <td>stream</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-32.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>fromAddress.getHost()</td>
+                            
+                               <td>host</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-33.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getCanonicalPath()</td>
+                            
+                               <td>:[9x2].toRealPath().toString()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-34.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsoluteFile()</td>
+                            
+                               <td>:[9x2].toAbsolutePath().normalize()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-35.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new BugPatternFileGenerator(:[2x1],:[2x2],:[2x3],:[2x4])</td>
+                            
+                               <td>new BugPatternFileGenerator(:[2x1],:[2x2],explanationDir,:[2x3],:[2x4])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-36.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].isFile()</td>
+                            
+                               <td>Files.isRegularFile(:[9x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-37.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,\"\")).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,\"\")).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>3</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-38.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>File::isDirectory</td>
+                            
+                               <td>Files::isDirectory</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-39.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>File.createTempFile(:[11x1],:[11x2],tempFileLocation)</td>
+                            
+                               <td>Files.createTempFile(:[11x1],:[11x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-40.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new TestInputFileBuilder(\"polop\",\"src/test/java/FooTest.java\").setModuleBaseDir(baseDir.toPath()).setType(InputFile.Type.TEST).build()</td>
+                            
+                               <td>new TestInputFileBuilder(\"polop\",\"src/test/java/FooTest.java\").setModuleBaseDir(baseDir).setCharset(StandardCharsets.UTF_8).setType(InputFile.Type.TEST).build()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-41.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[9x1:e].couldNotCreateLogDirectory(:[11])</td>
+                            
+                               <td>:[9x1].couldNotCreateLogDirectory(:[11],e)</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-42.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760)).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760)).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-43.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new TestInputFileBuilder(\"polop\",\"src/Foo.php\").setModuleBaseDir(baseDir.toPath()).setType(InputFile.Type.MAIN).build()</td>
+                            
+                               <td>new TestInputFileBuilder(\"polop\",\"src/Foo.php\").setModuleBaseDir(baseDir).setType(InputFile.Type.MAIN).setCharset(StandardCharsets.UTF_8).build()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-44.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>dirOrFile.toPath()</td>
+                            
+                               <td>progress</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-45.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new File(configPath,:[2x2])</td>
+                            
+                               <td>configDir.resolve(:[2x2]).toFile()</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-46.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>fileSystem.mkdir(:[11])</td>
+                            
+                               <td>Files.createDirectory(:[11])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-47.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new File(:[2x1],OS.separators(:[11]))</td>
+                            
+                               <td>:[2x1].resolve(:[11])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-48.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>File::new</td>
+                            
+                               <td>Paths::get</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-49.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new JavaParser:[3](:[2x1],new StreamProvider(new FileInputStream(f)))</td>
+                            
+                               <td>new JavaParser:[3](:[2x1],provider(f))</td>
+                            
+                               <td>3</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-50.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]definition.getWorkDir()</td>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]initWorkingDir(definition)</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-51.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].submit(() -> indexFile(fileSystem,progress,dirOrFile.toPath(),type))</td>
+                            
+                               <td>:[9x2].submit(() -> indexFile(dirOrFile,type,progress))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-52.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new BugPatternFileGenerator(:[2x1],:[2x2],true,:[2x4])</td>
+                            
+                               <td>new BugPatternFileGenerator(:[2x1],:[2x2],explanationDirBase,:[2x4],true)</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-53.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>resolvedAddress.getHost()</td>
+                            
+                               <td>host</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-54.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new File(:[2x1],\"src/main/java/org/MyFoo.JAVA\")</td>
+                            
+                               <td>:[2x1].toPath()</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-55.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>File::toURI</td>
+                            
+                               <td>Path::toUri</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-56.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new BugPatternFileGenerator(:[2x1],:[2x2],false,:[2x4])</td>
+                            
+                               <td>new BugPatternFileGenerator(:[2x1],:[2x2],explanationDirBase,:[2x4],false)</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-57.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsoluteFile()</td>
+                            
+                               <td>:[9x2].toFile()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-58.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[9x2]</td>
+                            
+                               <td>:[[9x2]].toFile()</td>
+                            
+                               <td>34</td>
+                            
+                               <td>11</td>
+                            
+                               <td>6</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-59.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsolutePath()</td>
+                            
+                               <td>:[9x2].toRealPath().toString()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-60.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/newDir\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,rootPath.toAbsolutePath().toString().concat(\"/newDir\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-61.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new TestInputFileBuilder(\"polop\",\"src/main/java/Foo.java\").setModuleBaseDir(baseDir.toPath()).setType(InputFile.Type.MAIN).build()</td>
+                            
+                               <td>new TestInputFileBuilder(\"polop\",\"src/main/java/Foo.java\").setModuleBaseDir(baseDir).setCharset(StandardCharsets.UTF_8).setType(InputFile.Type.MAIN).build()</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-62.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].toPath()</td>
+                            
+                               <td>:[9x2]</td>
+                            
+                               <td>37</td>
+                            
+                               <td>6</td>
+                            
+                               <td>4</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-63.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>Config.defaults(OnlineBackupSettings.online_backup_enabled,Settings.FALSE)</td>
+                            
+                               <td>config</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-64.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/otherDir\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>new PathHandler:[3](:[2x1],new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,rootPath.toAbsolutePath().toString().concat(\"/otherDir\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-65.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsolutePath()</td>
+                            
+                               <td>:[9x2].toAbsolutePath()</td>
+                            
+                               <td>5</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-66.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new ArrayList<File>(:[2])</td>
+                            
+                               <td>new ArrayList<>(:[2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-67.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsoluteFile()</td>
+                            
+                               <td>:[9x2]</td>
+                            
+                               <td>19</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-68.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getRootDirectory()</td>
+                            
+                               <td>:[9x2].getRootDirectory().resolve(CACHE_STATE_FILE)</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-69.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getParentFile()</td>
+                            
+                               <td>:[9x2].getParent()</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-70.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]this.walLocation.listFiles(new SimpleFileNameFilter(storage))</td>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]Files.find(walLocation,1,(Path path,BasicFileAttributes attributes) -> validateName(path.getFileName().toString(),storageName,locale))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-71.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].isDirectory()</td>
+                            
+                               <td>Files.isDirectory(:[9x2])</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td>2</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-72.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>Arrays.stream(:[9x5]).filter(part -> !part.endsWith(\".jar\"))</td>
+                            
+                               <td>Arrays.stream(:[9x5])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-73.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsolutePath()</td>
+                            
+                               <td>:[9x2].toString()</td>
+                            
+                               <td>127</td>
+                            
+                               <td>6</td>
+                            
+                               <td>4</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-74.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new FileResourceManager(:[2x1],:[2x2])</td>
+                            
+                               <td>new PathResourceManager(:[2x1],:[2x2])</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-75.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>FileUtils.deleteRecursively(:[11])</td>
+                            
+                               <td>FileUtils.deletePathRecursively(:[11])</td>
+                            
+                               <td>2</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-76.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]this.walLocation.listFiles(new FilenameFilter(storage))</td>
+                            
+                               <td>:[27l]:[28~\s*]:[29~[\+\-\*\&]*]=:[30~\s*]Files.find(walLocation,1,(Path path,BasicFileAttributes attrs) -> validateSimpleName(path.getFileName().toString(),locale))</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-77.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>dir.toFile()</td>
+                            
+                               <td>DirectoryHelper.getVerifiedIndexPath(directoryProviderName,properties,true)</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-78.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>:[[9x2]].getAbsolutePath()</td>
+                            
+                               <td>:[9x2]</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td>1</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-79.html>Link</a></td>
+                            
+                        </tr>
+                        
+                        <tr>
+                            
+                               <td>new File(:[2x1],:[2x2])</td>
+                            
+                               <td>:[2x1].resolve(:[2x2])</td>
+                            
+                               <td>46</td>
+                            
+                               <td>11</td>
+                            
+                               <td>8</td>
+                            
+                               <td><a href=/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/FileToPath/Mapping-80.html>Link</a></td>
+                            
+                        </tr>
+                        
+                    </table>
+                </div>
+            </div>
+
+        </div><!--/ 1st container end -->
+
+
+        <div class="gap-60"></div>
+    </section><!--/ Main container end -->
+
+
+    <!-- initialize jQuery Library -->
+    <script type="text/javascript" src="./js/jquery.js"></script>
+    <!-- Bootstrap jQuery -->
+    <script type="text/javascript" src="./js/bootstrap.min.js"></script>
+    <!-- Style Switcher -->
+    <script type="text/javascript" src="./js/style-switcher.js"></script>
+    <!-- Owl Carousel -->
+    <script type="text/javascript" src="./js/owl.carousel.js"></script>
+    <!-- PrettyPhoto -->
+    <script type="text/javascript" src="./js/jquery.prettyPhoto.js"></script>
+    <!-- Bxslider -->
+    <script type="text/javascript" src="./js/jquery.flexslider.js"></script>
+    <!-- CD Hero slider -->
+    <script type="text/javascript" src="./js/cd-hero.js"></script>
+    <!-- Isotope -->
+    <script type="text/javascript" src="./js/isotope.js"></script>
+    <script type="text/javascript" src="./js/ini.isotope.js"></script>
+    <!-- Wow Animation -->
+    <script type="text/javascript" src="./js/wow.min.js"></script>
+    <!-- SmoothScroll -->
+    <script type="text/javascript" src="./js/smoothscroll.js"></script>
+    <!-- Eeasing -->
+    <script type="text/javascript" src="./js/jquery.easing.1.3.js"></script>
+    <!-- Counter -->
+    <script type="text/javascript" src="./js/jquery.counterup.min.js"></script>
+    <!-- Waypoints -->
+    <script type="text/javascript" src="./js/waypoints.min.js"></script>
+    <!-- Template custom -->
+    <script type="text/javascript" src="./js/custom.js"></script>
+    <script src="./tablefilter/tablefilter.js"></script>
+    <script>
+        var tf_config = {
+            base_path: './tablefilter/',
+            loader: true,
+            col_types: ['string','string', 'number', 'number','number','string'],
+            extensions: [{name: 'sort'}]
+        };
+        var tf = new TableFilter('foo', tf_config);
+        tf.init();
+    </script>
+<!--[-->
+<!--                'string', 'string', 'number', 'number','number',-->
+<!--                'string']-->
+</div><!-- Body inner end -->
+</body>
+</html>

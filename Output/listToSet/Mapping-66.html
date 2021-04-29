@@ -1,0 +1,15 @@
+<table border="1"><thead><tr><th>OriginalCompleteBefore</th><th>OriginalCompleteAfter</th><th>Before</th><th>After</th><th>Project</th><th>Commit</th><th>CompilationUnit</th><th>LineNos</th><th>Names</th></tr></thead><tbody><tr><td>task.addStateChangeListener(taskInfo -> {
+  if (taskInfo.getState().isDone()) {
+synchronized (NodeTasks.this) {
+      remoteTasks.remove(task);
+    }
+  }
+}
+);
+</td><td>task.addStateChangeListener(taskInfo -> {
+  if (task.getTaskInfo().getState().isDone()) {
+    remoteTasks.remove(task);
+  }
+}
+);
+</td><td>taskInfo</td><td>task.getTaskInfo()</td><td>prestodb/presto</td><td>c1baa75cdcb6d6b1fe578d1d794bb4ead36900d4</td><td>com.facebook.presto.execution.NodeTaskMap.NodeTasks</td><td><table border="1"><tr><th>_1</th><td>76</td></tr><tr><th>_2</th><td>78</td></tr></table></td><td><table border="1"><tr><th>_1</th><td>remoteTasks</td></tr><tr><th>_2</th><td>remoteTasks</td></tr></table></td></tr></tbody></table>

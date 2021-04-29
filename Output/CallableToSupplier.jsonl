@@ -1,0 +1,2 @@
+{"Match":":[[9]].call(:[11])","Replace":":[9].get(:[11])","Instances":[{"Before":"value.call()","After":"value.get()"},{"Before":"sagaFactory.call()","After":"sagaFactory.get()"},{"Before":"callback.call()","After":"callback.get()"},{"Before":"callback.call()","After":"callback.get()"}]}
+{"Match":":[56:e].call(:[59])","Replace":":[56].get(:[59])","Instances":[{"Before":"this.keyValue.call()","After":"this.keyValue.get()"},{"Before":"this.certValue.call()","After":"this.certValue.get()"}]}
