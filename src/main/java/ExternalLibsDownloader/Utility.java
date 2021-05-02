@@ -1,4 +1,4 @@
-package ca.concordia.jaranalyzer.util;
+package ExternalLibsDownloader;
 
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -9,7 +9,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,10 +62,10 @@ public class Utility {
 		return jarFiles;
 	}
 
-	public static Path getJarStoragePath() {
-		return Path.of(PropertyReader.getProperty("jar.storage.directory"))
-				.resolve(PropertyReader.getProperty("jar.storage.filename"));
-	}
+//	public static Path getJarStoragePath() {
+//		return Path.of(PropertyReader.getProperty("jar.storage.directory"))
+//				.resolve(PropertyReader.getProperty("jar.storage.filename"));
+//	}
 
 	public static String getHTML(String urlToRead) throws Exception {
 	      StringBuilder result = new StringBuilder();
@@ -115,19 +114,17 @@ public class Utility {
 
 			Element root = document.getRootElement();
 
-			// get public properties for library version
 			HashMap<String,String> propertiesList= new HashMap<>();
 			try{
 				Element properties = getchild(  root, "properties");
 				List<Element> propertiesListNode = properties.getChildren();
 
-				for (int temp = 0; temp < propertiesListNode.size(); temp++) {
-					Element property = propertiesListNode.get(temp);
-					propertiesList.put("${"+property.getName() +"}", property.getValue());
+				for (Element property : propertiesListNode) {
+					propertiesList.put("${" + property.getName() + "}", property.getValue());
 
 				}
 			}catch(Exception ex){
-
+				System.out.println("Could not parse the pom");
 			}
 
 			List<Element> projectNodes = root.getChildren();
@@ -187,4 +184,15 @@ public class Utility {
 		System.out.println("Found libraries-> "+versionLibraries);
 		return versionLibraries.stream().filter(x->!projectVersions.contains(x)).collect(Collectors.toSet());
 	}
+
+
+//	public static Repository getRepository(String projectName, String cloneLink, Path pathToProject) {
+//		Repository repo;
+//		if (Files.exists(pathToProject))
+//			repo = Try.ofFailable(() -> Git.open(pathToProject.resolve(projectName).toFile()))
+//					.orElseThrow(() -> new RuntimeException("Could not open " + projectName)).getRepository();
+//		else repo = tryToClone(cloneLink, pathToProject.resolve(projectName))
+//				.orElseThrow(() -> new RuntimeException("Could not clone" + projectName)).getRepository();
+//		return repo;
+//	}
 }

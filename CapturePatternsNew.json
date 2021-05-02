@@ -1,84 +1,86 @@
 {
   "ExpressionPatterns": [
     {
-      "Name": "class-instance-creation-2arg",
-      "Template": "new :[[36]](:[37],:[38])"
-    },
-    {
-      "Name": "class-instance-creation-1arg",
-      "Template": "new :[[1]](:[2])"
-    },
-    {
-      "Name": "class-instance-creation1",
-      "Template": "new :[[3]]<:[4]>(:[5])"
-    },
-    {
-      "Name": "Member-Reference-new",
-      "Template": ":[6](:[7]::new):[8]"
-    },
-    {
-      "Name": "Method-Invocation1-2arg",
-      "Template": ":[[39]].:[[40c]](:[41],:[42])"
-    },
-    {
-      "Name": "Method-Invocation-static",
-      "Template": ":[43c~[A-Z]\\w*].:[[44]](:[45])"
-    },
-    {
-      "Name": "Method-Invocation-static-typearg",
-      "Template": ":[[46c~[A-Z]\\w*]].<:[47]>:[[48c]](:[49])"
-    },
-    {
-      "Name": "Method-Invocation1",
-      "Template": ":[[9]].:[[10c]](:[11])"
-    },
-    {
-      "Name": "Method-Invocation2",
-      "Template": ":[[12]].:[[13c]](:[14]).:[[15c]](:[16])"
-    },
-    {
-      "Name": "Method-Invocation3",
-      "Template": ":[[17]].<:[18]>:[[19c]](:[20])"
-    },
-    {
-      "Name": "Member-Reference-new",
-      "Template": ":[21](:[22]:::[23c]):[24]"
+      "Name": "Assignment",
+      "Template": ":[27l]:[28~\\s*]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[31]",
+      "subPatterns": [
+        {
+          "variable": "27l ",
+          "values": [":[27x1:e]", ":[[27x1:e]] :[[27x2]]"]
+        }
+      ]
     },
     {
       "Name": "Cast",
       "Template": "(:[25:e]):[26]"
     },
     {
-      "Name": "Assignment",
-      "Template": ":[27]:[28]:[29c~[\\+\\-\\*\\&]]=:[30]"
+      "Name": "ClassInstanceCreation",
+      "Template": "new :[[1c]]:[3](:[2])",
+      "subPatterns": [
+        {
+          "variable": "2",
+          "values": [ "", ":[2x1],:[2x2],:[2x3],:[2x4],:[2x5]", ":[2x1],:[2x2],:[2x3],:[2x4]",":[2x1],:[2x2],:[2x3]", ":[2x1],:[2x2]"]
+        },
+        {
+          "variable": "3",
+          "values": ["", "<:[3x1]>"]
+        }
+      ]
     },
     {
-      "Name": "Assignment2",
-      "Template": ":[31]:[[32]]:[33c~\\s*]=:[34]"
+      "Name": "Method-Invocation",
+      "Template": ":[9l].:[[10c]]:[12](:[11])",
+      "subPatterns": [
+        {
+          "variable": "9l",
+          "values":  [":[9x1c~([A-Z][a-z0-9]+)+]", ":[[9x2]]",  ":[[9x3]].:[[9x4c]](:[9x5])",":[[9x3]].:[[9x4c]](:[9x5]).:[[9x6c]](:[9x7]),"
+          , "new :[[9x1c]](:[9x2])",
+            ":[9x1:e]"]
+        },
+        {
+          "variable" : "11",
+          "values" : ["", ":[11x1],:[11x2],:[11x3],:[11x4],:[11x5]",":[11x1],:[11x2],:[11x3],:[11x4]",":[11x1],:[11x2],:[11x3]", ":[11x1],:[11x2]"]
+        },
+        {
+          "variable": "12",
+          "values" : ["",  "<:[12x1]>"]
+        }
+      ]
+    },
+    {
+      "Name": "Member-Reference",
+      "Template": ":[[22]]:::[[23]]",
+      "subPatterns": [
+        {
+        "variable": "23",
+        "values" : ["new", ":[[23x1c]]"]
+        }
+      ]
     },
     {
       "Name": "NumberLiteral",
-      "Template": ":[50~\\d]"
-    },
-    {
-      "Name": "LongLiteral1",
-      "Template": ":[51~\\d]:[52~[L-l]]"
+      "Template": ":[50~\\d]:[51]",
+      "subPatterns": [
+        {
+          "variable": "51",
+          "values": ["", ":[51x1~[L-l]]"]
+        }
+      ]
     },
     {
       "Name": "Hexdecimal",
-      "Template": ":[53~0[xX][0-9a-fA-F]+]"
-    },
-    {
-      "Name": "Hexdecimal-long",
-      "Template": ":[54~0[xX][0-9a-fA-F]+]:[55~[L-l]]"
+      "Template": ":[54~0[xX][0-9a-fA-F]+]:[52]",
+      "subPatterns": [
+        {
+          "variable": "52",
+          "values": ["", ":[52x1~[L-l]]"]
+        }
+      ]
     },
     {
       "Name": "Identifier",
       "Template": ":[[35]]"
-    },
-    {
-      "Name" : "MethodInvocation-2-nested-fields",
-      "Template": ":[56:e].:[[58c]](:[59])"
     }
   ]
 }

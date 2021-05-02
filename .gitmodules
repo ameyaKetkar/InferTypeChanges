@@ -1,3 +1,3 @@
-[submodule "Models"]
-	path = Models
-	url = https://github.com/ameyaKetkar/Models.git
+[submodule "ExternalLibsDownloader"]
+	path = ExternalLibsDownloader
+	url = https://github.com/ameyaKetkar/ExternalLibsDownloader.git

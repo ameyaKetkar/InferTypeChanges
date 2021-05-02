@@ -1,6 +1,11 @@
 
 package type.change.comby;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Generated;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -14,6 +19,9 @@ public class ExpressionPattern {
     @SerializedName("Template")
     @Expose
     private String template;
+    @SerializedName("subPatterns")
+    @Expose
+    private List<SubPattern> subPatterns = null;
 
     public String getName() {
         return name;
@@ -29,6 +37,31 @@ public class ExpressionPattern {
 
     public void setTemplate(String template) {
         this.template = template;
+    }
+
+    public List<SubPattern> getSubPatterns() {
+        return Stream.ofNullable(subPatterns).flatMap(x -> x.stream()).collect(Collectors.toList());
+    }
+
+    public void setSubPatterns(List<SubPattern> subPatterns) {
+        this.subPatterns = subPatterns;
+    }
+
+    public List<String> getSubPatternFor(String template_var){
+        return subPatterns != null ? subPatterns.stream()
+                .filter(x -> x.getVariable().equals(template_var))
+                .findFirst().stream()
+                .flatMap(x -> x.getValues().stream()).collect(Collectors.toList())
+                : new ArrayList<>();
+
+    }
+
+    public static ExpressionPattern getInstanceFrom(ExpressionPattern basicMatch, String template){
+        var exp = new ExpressionPattern();
+        exp.setName(basicMatch.getName());
+        exp.setSubPatterns(basicMatch.getSubPatterns());
+        exp.setTemplate(template);
+        return exp;
     }
 
 }

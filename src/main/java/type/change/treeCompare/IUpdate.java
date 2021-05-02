@@ -1,2 +1,4 @@
-package type.change.treeCompare;public interface IUpdate {
+package type.change.treeCompare;
+
+public interface IUpdate {
 }

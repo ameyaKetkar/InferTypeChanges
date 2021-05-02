@@ -1,4 +1,4 @@
-package Models;
+package ExternalLibsDownloader;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;

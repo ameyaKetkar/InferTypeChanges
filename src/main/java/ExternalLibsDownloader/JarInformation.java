@@ -1,6 +1,5 @@
-package Models;
+package ExternalLibsDownloader;
 
-import ca.concordia.jaranalyzer.util.Utility;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 

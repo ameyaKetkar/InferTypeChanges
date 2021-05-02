@@ -1,4 +1,4 @@
-package Models;
+package ExternalLibsDownloader;
 
 import java.util.ArrayList;
 

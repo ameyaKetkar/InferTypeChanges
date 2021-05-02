@@ -1,146 +1,84 @@
 {
-  "Patterns": [
+  "ExpressionPatterns": [
     {
-      "Pattern": "Rename class-instance-creation",
-      "Mappings": [
-        {
-          "Name": "class-instance-creation",
-          "Before": "new :[[4]](:[3])",
-          "After": "new :[[2]](:[3])"
-        },
-        {
-          "Name": "Member-Reference",
-          "Before": ":[5](:[2]::new):[3]",
-          "After": ":[5](:[4]::new):[3]"
-        }
-      ]
+      "Name": "class-instance-creation-2arg",
+      "Template": "new :[[36]](:[37],:[38])"
     },
-
     {
-    "Pattern": "Rename call-site",
-    "Mappings": [
-      {
-        "Name": "Method-Invocation",
-        "Before": ":[[1]].:[[2]](:[3])",
-        "After": ":[[1]].:[[4]](:[3])"
-      },
-      {
-        "Name": "Update-wrapper",
-        "Before": ":[6~\\w+].:[[2]](:[1])",
-        "After": ":[5~\\w+].:[[4]](:[1])"
-      },
-      {
-        "Name": "Member-Reference",
-        "Before": ":[1](:[3]:::[4]):[5]",
-        "After": ":[m1](:[m3]:::[7]):[5]"
-      }
-    ]
-  },
-  {
-    "Pattern": "Instance call-site to Static call-site",
-    "Mappings": [
-      {
-        "Name": "Instance-Call-Site",
-        "Before": ":[1].:[[2]](:[3])",
-        "After": ":[[4]].:[[5]](:[1])"
-      },
-      {
-        "Name": "Member-Reference",
-        "Before": ":[1](:[2]:::[3]):[4]",
-        "After": ":[1](:[5]:::[6]):[4]"
-      }
-    ]
-  },
-  {
-    "Pattern": "Assignment to setter",
-    "Mappings": [
-      {
-        "Name": "Assignment-2-Set",
-        "Before": ":[1]=:[2]",
-        "After": ":[1].:[[3]](:[2])"
-      }
-    ]
-  },
-  {
-    "Pattern": "New Instance Creation to instance method",
-    "Mappings": [
-      {
-        "Name": "New-Instance-Creation-2-Instance-Method",
-        "Before": "new :[2](:[1],:[3])",
-        "After": ":[1].:[[4]](:[3])"
-      }
-    ]
-  },
-  {
-      "Pattern": "Wrap",
-      "Mappings": [
-        {
-          "Name": "Wrap",
-          "Before": ":[1]",
-          "After": ":[[3]].:[[2]](:[1])"
-        }
-      ]
-  },
+      "Name": "class-instance-creation-1arg",
+      "Template": "new :[[1]](:[2])"
+    },
     {
-      "Pattern": "Introduce Casting",
-      "Mappings": [
-        {
-          "Name": "cast",
-          "Before": ":[1]",
-          "After": "(:[2]):[1]"
-        }
-      ]
+      "Name": "class-instance-creation1",
+      "Template": "new :[[3]]<:[4]>(:[5])"
     },
-  {
-      "Pattern": "Add-method-chain",
-      "Mappings": [
-        {
-          "Name": "add method chain1",
-          "Before": ":[1]",
-          "After": ":[1].:[[2]](:[4])"
-        },
-        {
-          "Name": "add method chain2",
-          "Before": ":[1].:[[2]](:[5])",
-          "After": ":[1].:[[2]](:[5]).:[[3]](:[4])"
-        }
-      ]
+    {
+      "Name": "Member-Reference-new",
+      "Template": ":[6](:[7]::new):[8]"
     },
-  {
-      "Pattern": "Remove-method-chain",
-      "Mappings": [
-        {
-          "Name": "Remove method chain1",
-          "Before": ":[1~\\w+].:[2]()",
-          "After": ":[1]"
-        },
-        {
-          "Name": "remove method chain2",
-          "Before": ":[1~\\w+].:[3]().:[2]",
-          "After": ":[1].:[2]"
-        }
-      ]
+    {
+      "Name": "Method-Invocation1-2arg",
+      "Template": ":[[39]].:[[40c]](:[41],:[42])"
     },
-
-  {
-      "Pattern": "Remove Casting",
-      "Mappings": [
-        {
-          "Name": "un-cast",
-          "Before": "(:[2]):[1]",
-          "After": ":[1]"
-        }
-      ]
-  },
-  {
-    "Pattern": "UnWrap",
-    "Mappings": [
-      {
-        "Name": "UnWrap",
-        "Before": ":[3~\\w+].:[2_.](:[1])",
-        "After": ":[1]"
-      }
-    ]
-  } 
+    {
+      "Name": "Method-Invocation-static",
+      "Template": ":[43c~[A-Z]\\w*].:[[44]](:[45])"
+    },
+    {
+      "Name": "Method-Invocation-static-typearg",
+      "Template": ":[[46c~[A-Z]\\w*]].<:[47]>:[[48c]](:[49])"
+    },
+    {
+      "Name": "Method-Invocation1",
+      "Template": ":[[9]].:[[10c]](:[11])"
+    },
+    {
+      "Name": "Method-Invocation2",
+      "Template": ":[[12]].:[[13c]](:[14]).:[[15c]](:[16])"
+    },
+    {
+      "Name": "Method-Invocation3",
+      "Template": ":[[17]].<:[18]>:[[19c]](:[20])"
+    },
+    {
+      "Name": "Member-Reference-new",
+      "Template": ":[21](:[22]:::[23c]):[24]"
+    },
+    {
+      "Name": "Cast",
+      "Template": "(:[25:e]):[26]"
+    },
+    {
+      "Name": "Assignment",
+      "Template": ":[27]:[28]:[29c~[\\+\\-\\*\\&]]=:[30]"
+    },
+    {
+      "Name": "Assignment2",
+      "Template": ":[31]:[[32]]:[33c~\\s*]=:[34]"
+    },
+    {
+      "Name": "NumberLiteral",
+      "Template": ":[50~\\d]"
+    },
+    {
+      "Name": "LongLiteral1",
+      "Template": ":[51~\\d]:[52~[L-l]]"
+    },
+    {
+      "Name": "Hexdecimal",
+      "Template": ":[53~0[xX][0-9a-fA-F]+]"
+    },
+    {
+      "Name": "Hexdecimal-long",
+      "Template": ":[54~0[xX][0-9a-fA-F]+]:[55~[L-l]]"
+    },
+    {
+      "Name": "Identifier",
+      "Template": ":[[35]]"
+    },
+    {
+      "Name" : "MethodInvocation-2-nested-fields",
+      "Template": ":[56:e].:[[58c]](:[59])"
+    }
   ]
 }
