@@ -1,3 +1,13 @@
-<table border="1"><thead><tr><th>OriginalCompleteBefore</th><th>OriginalCompleteAfter</th><th>Before</th><th>After</th><th>Project</th><th>Commit</th><th>CompilationUnit</th><th>LineNos</th><th>Names</th></tr></thead><tbody><tr><td>OLogManager.instance().error(this,"Error during channel close for file '" + osFile.getAbsolutePath() + "', during IO exception handling",ioe);
-</td><td>OLogManager.instance().error(this,"Error during channel close for file '" + osFile + "', during IO exception handling",ioe);
-</td><td>osFile.getAbsolutePath()</td><td>osFile</td><td>orientechnologies/orientdb</td><td>de410aa8d3455b55f3c39e49780136c0b6c5e64b</td><td>com.orientechnologies.orient.core.storage.fs.OFileClassic</td><td><table border="1"><tr><th>_1</th><td>871</td></tr><tr><th>_2</th><td>829</td></tr></table></td><td><table border="1"><tr><th>_1</th><td>osFile</td></tr><tr><th>_2</th><td>osFile</td></tr></table></td></tr></tbody></table>
+<table border="1"><thead><tr><th>OriginalCompleteBefore</th><th>OriginalCompleteAfter</th><th>Before</th><th>After</th><th>Project</th><th>Commit</th><th>CompilationUnit</th><th>LineNos</th><th>Names</th></tr></thead><tbody><tr><td>GraphDatabaseAPI db2=dbRule.restartDatabase((fs,storeDirectory) -> {
+  deleteAllBackedUpTransactionLogs();
+  fileSystem.deleteRecursively(storeDir);
+  fileSystem.mkdir(storeDir);
+}
+);
+</td><td>GraphDatabaseAPI db2=dbRule.restartDatabase((fs,storeDirectory) -> {
+  deleteAllBackedUpTransactionLogs();
+  FileUtils.deletePathRecursively(storeDir);
+  Files.createDirectory(storeDir);
+}
+);
+</td><td>fileSystem.deleteRecursively(storeDir)</td><td>FileUtils.deletePathRecursively(storeDir)</td><td>neo4j/neo4j</td><td>0d14f84874fe67f67d5bff45a39637dd819693cb</td><td>org.neo4j.backup.BackupProtocolServiceIT</td><td><table border="1"><tr><th>_1</th><td>991</td></tr><tr><th>_2</th><td>994</td></tr></table></td><td><table border="1"><tr><th>_1</th><td>storeDir</td></tr><tr><th>_2</th><td>storeDir</td></tr></table></td></tr></tbody></table>
