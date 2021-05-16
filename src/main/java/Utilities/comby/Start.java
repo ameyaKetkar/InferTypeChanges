@@ -1,12 +1,12 @@
 
-package type.change.comby;
+package Utilities.comby;
 
 import javax.annotation.Generated;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 @Generated("jsonschema2pojo")
-public class End__1 {
+public class Start {
 
     @SerializedName("offset")
     @Expose

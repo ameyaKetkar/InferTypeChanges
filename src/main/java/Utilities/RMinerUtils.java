@@ -1,18 +1,9 @@
 package Utilities;
 
-import com.google.gson.Gson;
-import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred;
-import gr.uom.java.xmi.LocationInfo;
-import gr.uom.java.xmi.decomposition.AbstractCodeMapping;
-import gr.uom.java.xmi.diff.*;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.refactoringminer.api.Refactoring;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Collection;
 import java.util.List;
@@ -20,11 +11,17 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
+//import gr.uom.java.xmi.LocationInfo;
+//import gr.uom.java.xmi.decomposition.AbstractCodeMapping;
+//import gr.uom.java.xmi.diff.*;
+//import org.apache.commons.lang3.tuple.ImmutablePair;
+//import org.refactoringminer.api.Refactoring;
+
 public class RMinerUtils {
 
-    public static Path getProjectFolder(String project){
-        return Paths.get("/Users/ameya/Research/TypeChangeStudy/Corpus").resolve("Project_"+project).resolve(project);
-    }
+//    public static Path getProjectFolder(String project){
+//        return Paths.get("/Users/ameya/Research/TypeChangeStudy/Corpus").resolve("Project_"+project).resolve(project);
+//    }
 
     public static List<CodeMapping> getAsCodeMapping(String url, TypeChange tc, String commit) {
         return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder().setB4(sm.getBeforeStmt())

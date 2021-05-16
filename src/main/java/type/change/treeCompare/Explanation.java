@@ -1,13 +1,12 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
-import Utilities.CaptureMappingsLike;
 import Utilities.CombyUtils;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
-import type.change.comby.Match;
-import type.change.comby.Range__1;
+import Utilities.comby.Match;
+import Utilities.comby.Range__1;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -16,6 +15,7 @@ import java.util.stream.Stream;
 
 import static Utilities.CombyUtils.*;
 import static java.util.stream.Collectors.*;
+import Utilities.CombyUtils.*;
 
 /**
  * If before and after MATCH SAME TEMPLATE
@@ -87,7 +87,7 @@ public class Explanation extends AbstractExplanation {
                     .filter(x -> isPerfectMatch(parent.getCodeSnippetB4(), x))
                     .map(x -> x.getMatches().get(0));
 
-            Optional<Match> newExplainationAfter = CombyUtils.getMatch(mergedAfter, parent.getCodeSnippetAfter(), null)
+            Optional<Match> newExplainationAfter = getMatch(mergedAfter, parent.getCodeSnippetAfter(), null)
                     .filter(x -> isPerfectMatch(parent.getCodeSnippetAfter(), x))
                     .map(x -> x.getMatches().get(0));
             if (newExplainationAfter.isPresent() && newExplainationBefore.isPresent())
@@ -373,7 +373,7 @@ public class Explanation extends AbstractExplanation {
                     .filter(x -> !matchedTemplateVariables.containsKey(x.getKey()))
                     .forEach(r -> replacements_before.put(r.getKey(), r.getValue()));
 
-        metaTemplate = metaTemplate.map(x -> CombyUtils.substitute(x, replacements_before),
+        metaTemplate = metaTemplate.map(x -> Utilities.CombyUtils.substitute(x, replacements_before),
                 x -> CombyUtils.substitute(x, replacements_after));
 
         for (var e : matchedTemplateVariables.entrySet()) {

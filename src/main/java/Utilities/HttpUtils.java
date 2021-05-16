@@ -15,7 +15,8 @@ public class HttpUtils {
 
     public static Optional<String> makeHttpRequest(Map<String, String> header) {
         try {
-            String[] objects = header.entrySet().stream().map(Tuple::fromEntry).flatMap(x -> x.toSeq().toJavaStream()).toArray(String[]::new);
+            String[] objects = header.entrySet().stream().map(Tuple::fromEntry).flatMap(x -> x.toSeq().toJavaStream())
+                    .toArray(String[]::new);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI("http://localhost:8080/"))
                     .headers(objects)

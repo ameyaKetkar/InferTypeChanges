@@ -1,5 +1,5 @@
 
-package type.change.comby;
+package Utilities.comby;
 
 import javax.annotation.Generated;
 import com.google.gson.annotations.Expose;

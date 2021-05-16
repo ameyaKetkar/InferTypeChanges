@@ -2,13 +2,11 @@ package Utilities;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import type.change.comby.CombyMatch;
+import Utilities.comby.CombyMatch;
 
 import java.util.*;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toMap;

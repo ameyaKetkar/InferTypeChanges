@@ -4,8 +4,8 @@ import Utilities.RMinerUtils.TypeChange;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import type.change.comby.CombyMatch;
-import type.change.comby.Environment;
+import Utilities.comby.CombyMatch;
+import Utilities.comby.Environment;
 import type.change.treeCompare.AbstractExplanation;
 import type.change.treeCompare.Explanation;
 import type.change.treeCompare.Update;
@@ -158,7 +158,7 @@ public class InferredMappings {
         }
 
         private boolean isReturnExpression(String originalComplete, String codeSnippet) {
-            Optional<type.change.comby.Match> cm = CombyUtils.getPerfectMatch(CaptureMappingsLike.PATTERNS_HEURISTICS.get("ReturnStmt"),
+            Optional<Utilities.comby.Match> cm = CombyUtils.getPerfectMatch(CaptureMappingsLike.PATTERNS_HEURISTICS.get("ReturnStmt"),
                     originalComplete, null)
                     .map(x -> x.getMatches().get(0));
             return cm.map(match -> match.getEnvironment().stream().anyMatch(x -> x.getVariable().equals("r")
@@ -167,7 +167,7 @@ public class InferredMappings {
         }
 
         private boolean varOnLHS(String tciVarName, String codeSnippet, String source){
-            Optional<type.change.comby.Match> cm = CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet().stream()
+            Optional<Utilities.comby.Match> cm = CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet().stream()
                     .filter(x -> x.getKey().contains("Assignment"))
                     .flatMap(x -> CombyUtils.getPerfectMatch(x.getValue(), source, null).stream())
                     .findFirst().map(x -> x.getMatches().get(0));

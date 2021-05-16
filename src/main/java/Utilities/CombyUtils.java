@@ -3,10 +3,10 @@ package Utilities;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import type.change.comby.CombyMatch;
-import type.change.comby.CombyRewrite;
-import type.change.comby.Environment;
-import type.change.comby.Match;
+import Utilities.comby.CombyMatch;
+import Utilities.comby.CombyRewrite;
+import Utilities.comby.Environment;
+import Utilities.comby.Match;
 
 import java.io.BufferedReader;
 import java.io.IOException;

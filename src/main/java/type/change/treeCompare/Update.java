@@ -1,16 +1,11 @@
 package type.change.treeCompare;
 
-import Utilities.CaptureMappingsLike;
 import Utilities.CombyUtils;
-import Utilities.InferredMappings;
 import Utilities.InferredMappings.Instance;
-import Utilities.RMinerUtils;
 import Utilities.RMinerUtils.TypeChange;
-import com.github.gumtreediff.tree.ITree;
-import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
+import com.github.gumtreediff.tree.Tree;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
-import io.vavr.Tuple;
-import type.change.comby.CombyRewrite;
+import Utilities.comby.CombyRewrite;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -19,8 +14,8 @@ import static java.util.stream.Collectors.toList;
 
 public class Update implements IUpdate {
 
-    private final ITree before;
-    private final ITree after;
+    private final Tree before;
+    private final Tree after;
     private final String beforeStr;
     private final String afterStr;
     private AbstractExplanation explanation;
@@ -28,7 +23,7 @@ public class Update implements IUpdate {
     private final Instance project_commit_cu_los;
 //    private boolean isRelevant;
 
-    public Update(ITree before, ITree after, String beforeStr, String afterStr,AbstractExplanation explanation, CodeMapping codeMapping, TypeChange typeChange) {
+    public Update(Tree before, Tree after, String beforeStr, String afterStr,AbstractExplanation explanation, CodeMapping codeMapping, TypeChange typeChange) {
         this.before = before;
         this.after = after;
         this.beforeStr = beforeStr;
@@ -38,7 +33,7 @@ public class Update implements IUpdate {
         this.project_commit_cu_los = new Instance(codeMapping, this, typeChange, explanation);
     }
 
-    public static boolean isSamePosWise(ITree t1, ITree t2){
+    public static boolean isSamePosWise(Tree t1, Tree t2){
         return t1.getPos() == t2.getPos() && t1.getEndPos() == t2.getEndPos();
     }
 
@@ -68,11 +63,11 @@ public class Update implements IUpdate {
         return before.hasSameType(after);
     }
 
-    public ITree getBefore() {
+    public Tree getBefore() {
         return before;
     }
 
-    public ITree getAfter() {
+    public Tree getAfter() {
         return after;
     }
 

@@ -21,21 +21,10 @@
     </build>
 
     <dependencies>
-
-        <dependency>
-            <groupId>com.github.tsantalis</groupId>
-            <artifactId>refactoring-miner</artifactId>
-            <version>2.1.0</version>
-        </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.8.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jgit</groupId>
-            <artifactId>org.eclipse.jgit</artifactId>
-            <version>5.2.1.201812262042-r</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -43,19 +32,9 @@
             <version>3.11.0</version>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.9.2</version>
-        </dependency>
-        <dependency>
             <groupId>io.vavr</groupId>
             <artifactId>vavr</artifactId>
             <version>0.10.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20180130</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
@@ -67,68 +46,32 @@
             <artifactId>guava</artifactId>
             <version>28.0-jre</version>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.apache.commons</groupId>-->
+<!--            <artifactId>commons-text</artifactId>-->
+<!--            <version>1.6</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>commons-io</groupId>-->
+<!--            <artifactId>commons-io</artifactId>-->
+<!--            <version>2.6</version>-->
+<!--        </dependency>-->
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-text</artifactId>
-            <version>1.6</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.6</version>
-        </dependency>
-        <dependency>
-            <groupId>gumtree</groupId>
-            <artifactId>client</artifactId>
-            <version>1.0</version>
-            <systemPath>${basedir}/lib/client-2.1.3-SNAPSHOT.jar</systemPath>
+            <groupId>com.t2r</groupId>
+            <artifactId>Models</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <systemPath>${basedir}/lib/Models-1.0-SNAPSHOT.jar</systemPath>
             <scope>system</scope>
         </dependency>
         <dependency>
-            <groupId>gumtree</groupId>
+            <groupId>com.github.gumtreediff</groupId>
             <artifactId>core</artifactId>
-            <version>1.0</version>
-            <systemPath>${basedir}/lib/core-2.1.3-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
+            <version>3.0.0-beta2</version>
         </dependency>
         <dependency>
-            <groupId>com.github.mpkorstanje</groupId>
-            <artifactId>simmetrics-core</artifactId>
-            <version>3.2.3</version>
-        </dependency>
-        <dependency>
-            <groupId>gumtree</groupId>
-            <artifactId>cleint-diff</artifactId>
-            <version>1.0</version>
-            <systemPath>${basedir}/lib/client.diff-2.1.3-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
-        </dependency>
-        <dependency>
-            <groupId>gumtree</groupId>
-            <artifactId>gen-jdt</artifactId>
-            <version>1.0</version>
-            <systemPath>${basedir}/lib/gen.jdt-2.1.3-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.shared</groupId>
-            <artifactId>maven-invoker</artifactId>
-            <version>3.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-tree</artifactId>
-            <version>5.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jdom</groupId>
-            <artifactId>jdom2</artifactId>
-            <version>2.0.6</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jason-goodwin</groupId>
-            <artifactId>better-monads</artifactId>
-            <version>0.4.0</version>
+            <groupId>com.github.gumtreediff</groupId>
+            <artifactId>gen.jdt</artifactId>
+            <version>3.0.0-beta2</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>

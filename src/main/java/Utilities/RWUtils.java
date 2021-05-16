@@ -1,12 +1,12 @@
 package Utilities;
 
 import com.google.gson.Gson;
-import type.change.Infer;
-import type.change.comby.CapturePatterns;
+import Utilities.comby.CapturePatterns;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,10 +31,10 @@ public class RWUtils {
         private FileWriterSingleton() {
             super();
         }
-        public synchronized void writeToFile(String str, String fileName) {
+        public synchronized void writeToFile(String str, Path filePath) {
             try {
-                Files.write(Infer.outputFolder.resolve(fileName), (String.join("\n", str)+"\n").getBytes(StandardCharsets.UTF_8),
-                        Files.exists(Infer.outputFolder.resolve(fileName)) ? APPEND : CREATE_NEW);
+                Files.write(filePath, (String.join("\n", str)+"\n").getBytes(StandardCharsets.UTF_8),
+                        Files.exists(filePath) ? APPEND : CREATE_NEW);
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -5,19 +5,19 @@ import Utilities.CaptureMappingsLike;
 import Utilities.CombyUtils;
 import Utilities.HttpUtils;
 import Utilities.RMinerUtils.TypeChange;
-import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.google.gson.Gson;
-import com.jasongoodwin.monads.Try;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
+import io.vavr.control.Try;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Expression;
-import type.change.comby.CombyMatch;
-import type.change.comby.Environment;
-import type.change.comby.Match;
+import Utilities.comby.CombyMatch;
+import Utilities.comby.Environment;
+import Utilities.comby.Match;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -154,7 +154,7 @@ public class GetIUpdate {
                         .map(y -> b.getValue()).stream()).findFirst();
     }
 
-    public IUpdate getUpdate(ASTNode before, ASTNode after, ITree root1, ITree root2) {
+    public IUpdate getUpdate(ASTNode before, ASTNode after, Tree root1, Tree root2) {
 
         if (root1 == null || root2 == null) return new NoUpdate();
 
@@ -206,8 +206,8 @@ public class GetIUpdate {
     }
 
     public IUpdate getUpdate(ASTNode before, ASTNode after) {
-        ITree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
-        ITree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
+        Tree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
+        Tree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
         return getUpdate(before, after, root1, root2);
     }
 
@@ -310,9 +310,7 @@ public class GetIUpdate {
         CompletableFuture.allOf(futures);
 
         List<Tuple2<Tuple2<String, String>, CombyMatch>> basicMatches =Stream.of(futures)
-                .map(x-> Try.ofFailable(x::get).orElse(null))
-                .filter(x->x!=null && x.isPresent())
-                .map(Optional::get)
+                .flatMap(x-> Try.of(() -> x.get()).getOrElse(Optional.empty()).stream())
                 .sorted(Comparator.comparingInt((Tuple2<Tuple2<String, String>, CombyMatch> x) -> x._2().getMatches().stream().mapToInt(z->z.getMatched().length())
                         .max().getAsInt())
                         .reversed().thenComparingInt(indexOf))

@@ -3,7 +3,6 @@ package type.change;
 import Utilities.*;
 import Utilities.RMinerUtils.Response;
 import com.google.gson.Gson;
-import com.t2r.common.models.refactorings.ProjectOuterClass.Project;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred;
 import io.vavr.Tuple;
@@ -13,6 +12,7 @@ import type.change.treeCompare.*;
 import type.change.visitors.NodeCounter;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -31,60 +31,31 @@ public class Infer {
 
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
-    public static Path outputFolder = Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output");
-
-    private static List<Tuple2<String, String>> fileNameTypechange = new ArrayList<>() {{
-        add(Tuple.of("java.io.File", "java.nio.file.Path"));
-        add(Tuple.of("java.util.List", "java.util.Set"));
-        add(Tuple.of("java.lang.String", "java.util.UUID"));
-        add(Tuple.of("java.lang.String", "java.net.URI"));
-        add(Tuple.of("java.lang.String", "java.util.regex.Pattern"));
-        add(Tuple.of("java.lang.String", "java.utilSet<java.lang.String>"));
-        add(Tuple.of("java.lang.String", "java.util.File"));
-        add(Tuple.of("java.net.URL", "java.net.URI"));
-        add(Tuple.of("java.net.URI", "java.net.URL"));
-        add(Tuple.of("java.lang.String", "java.util.Optional<java.lang.String>"));
-        add(Tuple.of("long", "java.time.Duration"));
-        add(Tuple.of("long", "java.time.Instant"));
-        add(Tuple.of("java.lang.Long", "java.time.Duration"));
-        add(Tuple.of("java.util.Date", "java.lang.Long"));
-        add(Tuple.of("java.util.Date", "java.time.LocalDate"));
-        add(Tuple.of("java.util.List", "java.util.Set"));
-        add(Tuple.of("java.util.Set", "com.google.common.collect.ImmutableSet")); // list
-        add(Tuple.of("java.util.Map", "com.google.common.collect.ImmutableMap"));
-        add(Tuple.of("java.util.Stack", "java.util.Deque")); //
-        add(Tuple.of("java.util.concurrent.Callable", "java.util.function.Supplier"));
-        add(Tuple.of("java.util.function.Function", "java.util.function.ToDoubleFunction"));
-        add(Tuple.of("java.util.function.Function", "java.util.function.ToIntFunction"));
-        add(Tuple.of("java.util.Optional", "java.util.OptionalInt"));
-        add(Tuple.of("long", "java.util.concurrent.atomic.AtomicLong")); // int boolean
-        add(Tuple.of("java.util.Map", "java.util.concurrent.ConcurrentHashMap"));
-        add(Tuple.of("java.util.concurrent.BlockingQueue", "java.util.Queue"));
-        add(Tuple.of("org.apache.hadoop.hbase.KeyValue", "org.apache.hadoop.hbase.Cell"));
-        add(Tuple.of("java.lang.String", "java.util.UUID"));
-
-    }};
 
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException {
+        ///Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output
+        Path outputFolder = Path.of(args[1]);
         MyLogger.setup();
-        for (var en : ASTUtils.getCommitsFor(fileNameTypechange).entrySet()) {
-            CompletableFuture[] futures = en.getValue().entrySet()
-                    .stream().flatMap(x -> x.getValue().stream().flatMap(commit -> AnalyzeCommit(x.getKey(), commit)))
+        Path inputFile = Path.of(args[0]);
+        GetRelevantCommits.Input input = new Gson().fromJson(Files.readString(inputFile), GetRelevantCommits.Input.class);
+        for (var en : input.inputTypeChangeCommits) {
+            CompletableFuture[] futures = en.projectUrlSHA
+                    .stream().flatMap(commit -> AnalyzeCommit(commit._1(), commit._2(), commit._3(), outputFolder))
                     .toArray(CompletableFuture[]::new);
             CompletableFuture.allOf(futures).join();
         }
     }
 
-    public static Stream<CompletableFuture<Void>> AnalyzeCommit(Project p, String commit) {
+    public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFolder) {
 
 //        if(!commit.equals("f6ca9e9025cce3ab7f012be183a55fcad2b709f6"))
 //            return Stream.empty();
 
-        System.out.println("Analyzing commit " + commit + " " + p.getName());
+        System.out.println("Analyzing commit " + commit + " " + repoName);
         // Call Refactoring Miner
         var response = HttpUtils.makeHttpRequest(Map.of("purpose", "RMiner",
-                "commit", commit, "project", p.getName(), "url", p.getUrl()));
+                "commit", commit, "project", repoName, "url", repoClonURL));
 
         if (response.isEmpty()) {
             System.out.println("REFACTORING MINER RESPONSE IS EMPTY !!!!! ");
@@ -119,7 +90,7 @@ public class Infer {
                 return Stream.empty();
             }
 
-             return getAsCodeMapping(p.getUrl(), rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+             return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
 
                      // Restrict input to a particular statement mapping
                      //.filter(c -> c.getB4().contains("return gf.apply(n) + hf.apply(n.getState());"))
@@ -129,7 +100,7 @@ public class Infer {
                                     .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
                                     .collect(joining("\n")))
                             .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
-                                    .writeToFile(s,"ConcurrentOp.jsonl")));
+                                    .writeToFile(s, outputFolder.resolve("output.jsonl"))));
         });
 
     }

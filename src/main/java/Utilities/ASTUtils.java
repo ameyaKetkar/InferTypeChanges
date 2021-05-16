@@ -4,19 +4,10 @@ import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.gen.jdt.AbstractJdtVisitor;
 import com.github.gumtreediff.gen.jdt.JdtVisitor;
 import com.github.gumtreediff.matchers.MappingStore;
-import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.google.common.collect.Streams;
-import com.t2r.common.models.ast.TypeGraphOuterClass;
-import com.t2r.common.models.refactorings.NameSpaceOuterClass;
-import com.t2r.common.models.refactorings.ProjectOuterClass;
-import com.t2r.common.models.refactorings.ProjectOuterClass.Project;
-import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
-import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
-import com.t2r.common.models.refactorings.TypeChangeCommitOuterClass;
-import com.t2r.common.utilities.PrettyPrinter;
-import com.t2r.common.utilities.ProtoUtil;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
@@ -24,12 +15,9 @@ import io.vavr.control.Try;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.compiler.IScanner;
-import org.eclipse.jdt.core.compiler.InvalidInputException;
 import org.eclipse.jdt.core.dom.*;
-import org.eclipse.jdt.internal.compiler.parser.Scanner;
-import type.change.comby.Range__1;
+import Utilities.comby.Range__1;
 
-import javax.swing.plaf.nimbus.State;
 import java.io.IOException;
 import java.io.StreamTokenizer;
 import java.io.StringReader;
@@ -43,7 +31,6 @@ import java.util.stream.Stream;
 
 import static com.t2r.common.utilities.PrettyPrinter.pretty;
 import static java.util.stream.Collectors.*;
-import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 
 public class ASTUtils {
 
@@ -213,12 +200,12 @@ public class ASTUtils {
 //
 //    }
 
-    public static Stream<ITree> getChildren(ITree root1) {
+    public static Stream<Tree> getChildren(Tree root1) {
         return root1.getChildren().stream()
                 .flatMap(c -> c.getType().name.equals("METHOD_INVOCATION_ARGUMENTS") ? c.getChildren().stream() : Stream.of(c));
     }
 
-    public static Optional<ASTNode> getCoveringNode(ASTNode node, ITree tree) {
+    public static Optional<ASTNode> getCoveringNode(ASTNode node, Tree tree) {
         var n = NodeFinder.perform(node, tree.getPos(), tree.getLength());
         if (n == null) return Optional.empty();
         if (n.getStartPosition() != tree.getPos() || n.getLength() != tree.getLength()) return Optional.empty();
@@ -239,7 +226,7 @@ public class ASTUtils {
         }
     }
 
-    public static boolean isSubsumedBy(ITree tree, ITree subsumedTree){
+    public static boolean isSubsumedBy(Tree tree, Tree subsumedTree){
         return (subsumedTree.getPos() > tree.getPos() && subsumedTree.getEndPos() <= tree.getEndPos())
                 || (subsumedTree.getPos() >= tree.getPos() && subsumedTree.getEndPos() < tree.getEndPos());
     }
@@ -257,9 +244,9 @@ public class ASTUtils {
         }
     }
 
-    public static Optional<CompilationUnit> getResolvedCompilationUnit(String cu_path, Path pathCommitFiles, Set<Tuple3<String, String, String>> jarArtifactInfoSet){
+    public static Optional<CompilationUnit> getResolvedCompilationUnit(String cu_path, Path pathCommitFiles, Set<Tuple3<String, String, String>> jarArtifactInfoSet, String pathToThirdPartyLibs, String pathToJdk){
         Path cuPath = pathCommitFiles.resolve(cu_path);
-        ASTParser parser = ASTParser.newParser(AST.JLS11);
+        ASTParser parser = ASTParser.newParser(AST.JLS15);
         parser.setResolveBindings(true);
         parser.setKind(ASTParser.K_COMPILATION_UNIT);
         parser.setBindingsRecovery(true);
@@ -275,12 +262,12 @@ public class ASTUtils {
                     .map(x -> x.toAbsolutePath().toString()).toArray(String[]::new);
 
             List<String> jarfiles = jarArtifactInfoSet.stream()
-                    .map(x -> Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Input/dependencies/")
+                    .map(x -> Path.of(pathToThirdPartyLibs)
                             .resolve(x._2() + "-" + x._3() + ".jar").toAbsolutePath().toString())
                     .collect(toList());
 
             String[] classpath = new String[jarfiles.size() + 1];
-            classpath[0] = "/Library/Java/JavaVirtualMachines/jdk-11.0.6.jdk/Contents/Home/";
+            classpath[0] = pathToJdk;
             int c = 1;
             for (var j : jarfiles){
                 classpath[c] = j;
@@ -312,97 +299,6 @@ public class ASTUtils {
             return Streams.concat(l1.stream(), l2.stream()).collect(toList());
     }
 
-    public static Map<Tuple2<String, String>,Map<Project, List<String>>> getCommitsFor(List<Tuple2<String, String>> fileNameTypechange){
-        ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Input/ProtosOut/"));
-        ProtoUtil.ReadWriteAt rw_output = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Output/"));
-        ArrayList<Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
-
-        List<Tuple2<Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
-                .map(z -> Tuple.of(z, rw_output.<TypeChangeCommitOuterClass.TypeChangeCommit>readAll("TypeChangeCommit_" + z.getName(), "TypeChangeCommit")))
-                .collect(toList());
-        Map<Tuple2<String, String>,Map<Project, List<String>>> result = new HashMap<>();
-        Map<Tuple2<String, String>, List<Tuple2<Project,String>>> commitsGroupedByTypeChange = new HashMap<>();
-
-        for(var p : project_tcc){
-            if(p._2().size()<=1) continue;
-            for (TypeChangeCommitOuterClass.TypeChangeCommit x : p._2()){
-                for(TypeChangeAnalysis anlys: x.getTypeChangesList()){
-                    if(!anlys.getB4().getRoot().getIsTypeVariable() && !anlys.getAftr().getRoot().getIsTypeVariable()
-                            && !anlys.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !anlys.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal)){
-                        Tuple2<String, String> typeChange = Tuple.of(anlys.getB4(), anlys.getAftr()).map(PrettyPrinter::pretty, PrettyPrinter::pretty);
-                        if(fileNameTypechange.contains(typeChange)) {
-                            List<Tuple2<Project, String>> en = List.of(Tuple.of(p._1(), x.getSha()));
-                            commitsGroupedByTypeChange.merge(typeChange, en, ASTUtils::mergeList);
-                        }
-                    }
-                }
-            }
-        }
-
-        return commitsGroupedByTypeChange.entrySet().stream().map(e -> Tuple.of(e.getKey(), e.getValue().stream().collect(groupingBy(x->x._1(), collectingAndThen(toList(), ls->ls.stream().map(x->x._2()).collect(toList()))))))
-                .collect(toMap(x->x._1(), x->x._2()));
-    }
-
-    public static List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>>> getPopularTypeChanges(Map<Tuple2<String, String>, String> fileNameTypechange){
-        ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Input/ProtosOut/"));
-        ProtoUtil.ReadWriteAt rw_output = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Output/"));
-        ArrayList<Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
-
-        List<Tuple2<Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
-                .map(z -> Tuple.of(z, rw_output.<TypeChangeCommitOuterClass.TypeChangeCommit>readAll("TypeChangeCommit_" + z.getName(), "TypeChangeCommit")))
-                .collect(toList());
-
-
-        Map<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>> instancesGroupedByTypeChange = new HashMap<>();
-        Map<Tuple2<String, String>, List<String>> commitsGroupedByTypeChange = new HashMap<>();
-        Map<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<String>> projectsGroupedByTypeChange = new HashMap<>();
-
-        List<TypeChangeAnalysis> typeChangeAnalyses = new ArrayList<>();
-        for(var p : project_tcc){
-            if(p._2().size()<=1) continue;
-            for (TypeChangeCommitOuterClass.TypeChangeCommit x : p._2()){
-
-
-                for(TypeChangeAnalysis anlys: x.getTypeChangesList()){
-                    if(!anlys.getB4().getRoot().getIsTypeVariable() && !anlys.getAftr().getRoot().getIsTypeVariable()
-
-                        && !anlys.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !anlys.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal)){
-                        Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph> typeChange = Tuple.of(anlys.getB4(), anlys.getAftr());
-
-                        instancesGroupedByTypeChange.merge(typeChange,
-                                anlys.getTypeChangeInstancesList().stream().filter(z -> z.getCodeMappingList().stream().anyMatch(g -> !isNotWorthLearning(g))).collect(toList()), ASTUtils::mergeList);
-                        commitsGroupedByTypeChange.merge(typeChange.map(PrettyPrinter::pretty, PrettyPrinter::pretty), List.of(x.getSha()), ASTUtils::mergeList);
-                        projectsGroupedByTypeChange.merge(typeChange, List.of(p._1.getName()), ASTUtils::mergeList);
-                    }
-                }
-            }
-        }
-
-
-
-
-        List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>>> groupedTci = instancesGroupedByTypeChange
-                .entrySet().stream()
-                .filter(x -> x.getValue().size() > 0)
-                .sorted(Comparator.comparingInt((Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>> x) -> projectsGroupedByTypeChange.get(x.getKey()).size())
-                        .thenComparingInt(x -> commitsGroupedByTypeChange.get(x.getKey()).size()))
-                .collect(toList());
-
-        Collections.reverse(groupedTci);
-
-//        for(var e : groupedTci){
-//            System.out.println(e.getKey().map(PrettyPrinter::pretty, PrettyPrinter::pretty) + " " + projectsGroupedByTypeChange.get(e.getKey()).size());
-//
-//        }
-        // https://github.com/undertow-io/undertow/commit/4428e96024ae631b8c299dc7fcda657b35e7e7a8?diff=split#diff-85de71c3800f1cbd223b8cb766dfb9f8L101
-
-        System.out.println(groupedTci.size());
-
-        return groupedTci.stream()
-                .filter(x -> fileNameTypechange.keySet().stream().anyMatch(v -> v._1().equals(pretty(x.getKey()._1()))
-                        && v._2().equals(pretty(x.getKey()._2()))))
-                .collect(toList());
-    }
 
 
     public static String extractCommit(String url){
