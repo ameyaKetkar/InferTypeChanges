@@ -10,8 +10,12 @@ import com.google.common.collect.Streams;
 import com.t2r.common.models.ast.TypeGraphOuterClass;
 import com.t2r.common.models.refactorings.NameSpaceOuterClass;
 import com.t2r.common.models.refactorings.ProjectOuterClass;
+import com.t2r.common.models.refactorings.ProjectOuterClass.Project;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
+import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis;
+import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import com.t2r.common.models.refactorings.TypeChangeCommitOuterClass;
+import com.t2r.common.utilities.PrettyPrinter;
 import com.t2r.common.utilities.ProtoUtil;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -23,6 +27,7 @@ import org.eclipse.jdt.core.compiler.IScanner;
 import org.eclipse.jdt.core.compiler.InvalidInputException;
 import org.eclipse.jdt.core.dom.*;
 import org.eclipse.jdt.internal.compiler.parser.Scanner;
+import type.change.comby.Range__1;
 
 import javax.swing.plaf.nimbus.State;
 import java.io.IOException;
@@ -37,8 +42,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.t2r.common.utilities.PrettyPrinter.pretty;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 
 public class ASTUtils {
@@ -216,8 +220,23 @@ public class ASTUtils {
 
     public static Optional<ASTNode> getCoveringNode(ASTNode node, ITree tree) {
         var n = NodeFinder.perform(node, tree.getPos(), tree.getLength());
-        return n == null ? Optional.empty() : n.getStartPosition() != tree.getPos() || n.getLength() != tree.getLength()
-                ? Optional.empty() : Optional.of(n);
+        if (n == null) return Optional.empty();
+        if (n.getStartPosition() != tree.getPos() || n.getLength() != tree.getLength()) return Optional.empty();
+        return Optional.of(n);
+    }
+
+    public static Optional<ASTNode> getCoveringNode(ASTNode node, Range__1 r) {
+        try {
+            int length = r.getEnd().getOffset() - r.getStart().getOffset();
+            int start = node.getStartPosition() + r.getStart().getOffset();
+            var n = NodeFinder.perform(node, start, length);
+            if (n == null) return Optional.empty();
+            if (n.getStartPosition() != start || n.getLength() != length) return Optional.empty();
+            return Optional.of(n);
+        }catch (Exception e){
+            e.printStackTrace();
+            return Optional.empty();
+        }
     }
 
     public static boolean isSubsumedBy(ITree tree, ITree subsumedTree){
@@ -284,53 +303,76 @@ public class ASTUtils {
         return Optional.empty();
     }
 
-    public static boolean isNotWorthLearning(TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping cm){
+    public static boolean isNotWorthLearning(CodeMapping cm){
         return cm.getIsSame() || cm.getReplcementInferredList().stream().allMatch(x -> x.getReplacementType().equals("VARIABLE_NAME")
                 || x.getReplacementType().equals("STRING_LITERAL"));
-    }
-
-    public static void printCodeMappingStuff(TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping cm, String nameB4, String nameAfter, String stmtB4, String stmtAftr, Optional<Statement> stmt_b, Optional<Statement> stmt_a) {
-
-
-        LOGGER.info(String.join("\n", nameB4 + " -> " + nameAfter,
-        String.join(",",String.valueOf(stmt_b.isPresent()), nodeClassForType(stmt_b.get().getNodeType()).toString(), stmtB4.replace("\n", "")),
-        String.join(String.valueOf(stmt_a.isPresent()), nodeClassForType(stmt_a.get().getNodeType()).toString(), stmtAftr.replace("\n", "")),
-        cm.getReplcementInferredList().stream().map(TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred::getReplacementType).collect(joining(" "))));
     }
 
     public static <T> List<T>  mergeList (List<T> l1, List<T> l2){
             return Streams.concat(l1.stream(), l2.stream()).collect(toList());
     }
 
-    public static List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysisOuterClass.TypeChangeAnalysis.TypeChangeInstance>>> getPopularTypeChanges(Map<Tuple2<String, String>, String> fileNameTypechange){
+    public static Map<Tuple2<String, String>,Map<Project, List<String>>> getCommitsFor(List<Tuple2<String, String>> fileNameTypechange){
         ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Input/ProtosOut/"));
         ProtoUtil.ReadWriteAt rw_output = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Output/"));
-        ArrayList<ProjectOuterClass.Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
+        ArrayList<Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
 
-        List<Tuple2<ProjectOuterClass.Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
+        List<Tuple2<Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
+                .map(z -> Tuple.of(z, rw_output.<TypeChangeCommitOuterClass.TypeChangeCommit>readAll("TypeChangeCommit_" + z.getName(), "TypeChangeCommit")))
+                .collect(toList());
+        Map<Tuple2<String, String>,Map<Project, List<String>>> result = new HashMap<>();
+        Map<Tuple2<String, String>, List<Tuple2<Project,String>>> commitsGroupedByTypeChange = new HashMap<>();
+
+        for(var p : project_tcc){
+            if(p._2().size()<=1) continue;
+            for (TypeChangeCommitOuterClass.TypeChangeCommit x : p._2()){
+                for(TypeChangeAnalysis anlys: x.getTypeChangesList()){
+                    if(!anlys.getB4().getRoot().getIsTypeVariable() && !anlys.getAftr().getRoot().getIsTypeVariable()
+                            && !anlys.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !anlys.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal)){
+                        Tuple2<String, String> typeChange = Tuple.of(anlys.getB4(), anlys.getAftr()).map(PrettyPrinter::pretty, PrettyPrinter::pretty);
+                        if(fileNameTypechange.contains(typeChange)) {
+                            List<Tuple2<Project, String>> en = List.of(Tuple.of(p._1(), x.getSha()));
+                            commitsGroupedByTypeChange.merge(typeChange, en, ASTUtils::mergeList);
+                        }
+                    }
+                }
+            }
+        }
+
+        return commitsGroupedByTypeChange.entrySet().stream().map(e -> Tuple.of(e.getKey(), e.getValue().stream().collect(groupingBy(x->x._1(), collectingAndThen(toList(), ls->ls.stream().map(x->x._2()).collect(toList()))))))
+                .collect(toMap(x->x._1(), x->x._2()));
+    }
+
+    public static List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>>> getPopularTypeChanges(Map<Tuple2<String, String>, String> fileNameTypechange){
+        ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Input/ProtosOut/"));
+        ProtoUtil.ReadWriteAt rw_output = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Output/"));
+        ArrayList<Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
+
+        List<Tuple2<Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
                 .map(z -> Tuple.of(z, rw_output.<TypeChangeCommitOuterClass.TypeChangeCommit>readAll("TypeChangeCommit_" + z.getName(), "TypeChangeCommit")))
                 .collect(toList());
 
 
-        Map<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysisOuterClass.TypeChangeAnalysis.TypeChangeInstance>> instancesGroupedByTypeChange = new HashMap<>();
-        Map<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<String>> commitsGroupedByTypeChange = new HashMap<>();
+        Map<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>> instancesGroupedByTypeChange = new HashMap<>();
+        Map<Tuple2<String, String>, List<String>> commitsGroupedByTypeChange = new HashMap<>();
         Map<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<String>> projectsGroupedByTypeChange = new HashMap<>();
 
-        List<TypeChangeAnalysisOuterClass.TypeChangeAnalysis> typeChangeAnalyses = new ArrayList<>();
+        List<TypeChangeAnalysis> typeChangeAnalyses = new ArrayList<>();
         for(var p : project_tcc){
             if(p._2().size()<=1) continue;
             for (TypeChangeCommitOuterClass.TypeChangeCommit x : p._2()){
 
 
-                for(TypeChangeAnalysisOuterClass.TypeChangeAnalysis e: x.getTypeChangesList()){
-                    if(!e.getB4().getRoot().getIsTypeVariable() && !e.getAftr().getRoot().getIsTypeVariable()
-                        && !e.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !e.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal)){
-                        Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph> typeChange = Tuple.of(e.getB4(), e.getAftr());
+                for(TypeChangeAnalysis anlys: x.getTypeChangesList()){
+                    if(!anlys.getB4().getRoot().getIsTypeVariable() && !anlys.getAftr().getRoot().getIsTypeVariable()
+
+                        && !anlys.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !anlys.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal)){
+                        Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph> typeChange = Tuple.of(anlys.getB4(), anlys.getAftr());
 
                         instancesGroupedByTypeChange.merge(typeChange,
-                                e.getTypeChangeInstancesList().stream().filter(z -> z.getCodeMappingList().stream().anyMatch(g -> !isNotWorthLearning(g))).collect(toList()), ASTUtils::mergeList);
-                        commitsGroupedByTypeChange.merge(typeChange, Arrays.asList(x.getSha()), ASTUtils::mergeList);
-                        projectsGroupedByTypeChange.merge(typeChange, Arrays.asList(p._1.getName()), ASTUtils::mergeList);
+                                anlys.getTypeChangeInstancesList().stream().filter(z -> z.getCodeMappingList().stream().anyMatch(g -> !isNotWorthLearning(g))).collect(toList()), ASTUtils::mergeList);
+                        commitsGroupedByTypeChange.merge(typeChange.map(PrettyPrinter::pretty, PrettyPrinter::pretty), List.of(x.getSha()), ASTUtils::mergeList);
+                        projectsGroupedByTypeChange.merge(typeChange, List.of(p._1.getName()), ASTUtils::mergeList);
                     }
                 }
             }
@@ -338,10 +380,11 @@ public class ASTUtils {
 
 
 
-        List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysisOuterClass.TypeChangeAnalysis.TypeChangeInstance>>> groupedTci = instancesGroupedByTypeChange
+
+        List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>>> groupedTci = instancesGroupedByTypeChange
                 .entrySet().stream()
                 .filter(x -> x.getValue().size() > 0)
-                .sorted(Comparator.comparingInt((Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysisOuterClass.TypeChangeAnalysis.TypeChangeInstance>> x) -> projectsGroupedByTypeChange.get(x.getKey()).size())
+                .sorted(Comparator.comparingInt((Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysis.TypeChangeInstance>> x) -> projectsGroupedByTypeChange.get(x.getKey()).size())
                         .thenComparingInt(x -> commitsGroupedByTypeChange.get(x.getKey()).size()))
                 .collect(toList());
 

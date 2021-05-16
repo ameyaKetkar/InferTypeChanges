@@ -2,3 +2,9 @@
 *.iml
 .idea/
 .DS_Store
+/target/
+/Output/
+/oldStuff/
+Logging.txt
+Logging1.txt
+scratch1.md

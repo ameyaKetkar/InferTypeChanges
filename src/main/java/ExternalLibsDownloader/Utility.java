@@ -130,7 +130,7 @@ public class Utility {
 			List<Element> projectNodes = root.getChildren();
 
 			if (!projectNodes.stream().allMatch(e -> e.getName().equals("project"))){
-				projectNodes = Arrays.asList(root);
+				projectNodes = List.of(root);
 			}
 
 			for(Element project: projectNodes) {
@@ -152,14 +152,12 @@ public class Utility {
 
 				if (dependencies != null) {
 					List<Element> dependencytList = dependencies.getChildren();
-					for (int temp = 0; temp < dependencytList.size(); temp++) {
-						Element dependency = dependencytList.get(temp);
+					for (Element dependency : dependencytList) {
 						List<Element> librariesList = dependency.getChildren();
 						String groupId = "";
 						String artifactId = "";
 						String version = "";
-						for (int temp1 = 0; temp1 < librariesList.size(); temp1++) {
-							Element libraryInfo = librariesList.get(temp1);
+						for (Element libraryInfo : librariesList) {
 							if (libraryInfo.getName().equals("groupId"))
 								groupId = libraryInfo.getValue();
 							if (libraryInfo.getName().equals("artifactId"))

@@ -3,6 +3,7 @@ package ExternalLibsDownloader;
 import com.t2r.common.utilities.FileUtils;
 import io.vavr.Tuple;
 import io.vavr.Tuple3;
+import io.vavr.Value;
 import io.vavr.control.Try;
 import org.apache.maven.shared.invoker.*;
 import org.eclipse.jgit.api.Git;
@@ -12,13 +13,18 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
+
 import static com.t2r.common.utilities.FileUtils.*;
 import static com.t2r.common.utilities.GitUtil.populateFileContents;
 import static com.t2r.common.utilities.GitUtil.tryToClone;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 import static type.change.Learner.pathToCorpus;
 
 /**
@@ -142,7 +148,8 @@ public class ExternalJarExtractionUtility {
         if (jarFile == null)
             return null;
 
-        return new JarInformation(jarFile, groupId, artifactId, version);
+        JarInformation jarInformation = new JarInformation(jarFile, groupId, artifactId, version);
+        return jarInformation;
     }
 
     private static JarInformation getAsJarInformation(String url, String groupId, String artifactId, String version, String jarsPath) {
@@ -177,5 +184,34 @@ public class ExternalJarExtractionUtility {
         }
 
         return jarFile;
+    }
+
+    public static void main(String a[]) throws IOException {
+
+        List<JarInformation> ji = Files.walk(Paths.get("/Users/ameya/Research/TypeChangeStudy/jdk1.8.0_291"))
+                .filter(x -> x.toAbsolutePath().toString().endsWith(".jar"))
+                .peek(x-> System.out.println(x.toAbsolutePath().toString()))
+                .map(x->Try.of(() -> Tuple.of(x.getFileName().toString(), new JarFile(x.toFile()))).onFailure(z -> z.printStackTrace()))
+                .flatMap(Value::toJavaStream)
+                .map(x -> getAsJarInformation(x._2(), x._1(), "j", "8"))
+                .filter(x->x.getPackages().size() > 0)
+                .collect(Collectors.toList());
+
+        Map<Boolean, String> str = ji.stream()
+                .flatMap(x -> x.getPackages().stream().flatMap(y -> y.getClasses().stream()))
+                .map(x -> x.getQualifiedName())
+                .collect(groupingBy(x -> x.startsWith("java.lang"), collectingAndThen(toList(), xs->xs.stream().collect(joining("\n")))));
+
+        Files.write(Paths.get("/Users/ameya/Research/TypeChangeStudy/HttpServer/Input/javaClasses.txt"),str.get(false).getBytes(), StandardOpenOption.CREATE);
+        Files.write(Paths.get("/Users/ameya/Research/TypeChangeStudy/HttpServer/Input/javaLangClasses.txt"),str.get(true).getBytes(), StandardOpenOption.CREATE);
+
+
+
+
+
+
+
+        System.out.println();
+
     }
 }

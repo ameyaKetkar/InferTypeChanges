@@ -1,11 +1,11 @@
 package type.change;
 
-import Utilities.ASTUtils;
-import Utilities.CombyUtils;
-import Utilities.InferredMappings;
+import Utilities.*;
+import Utilities.RMinerUtils.Response;
 import com.google.gson.Gson;
+import com.t2r.common.models.refactorings.ProjectOuterClass.Project;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
-import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.TypeChangeInstance;
+import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import logging.MyLogger;
@@ -13,126 +13,163 @@ import type.change.treeCompare.*;
 import type.change.visitors.NodeCounter;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
-import static Utilities.RWUtils.*;
-import static com.t2r.common.utilities.PrettyPrinter.pretty;
+import static Utilities.RMinerUtils.*;
+
 import static java.util.stream.Collectors.*;
+import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
+import static type.change.treeCompare.GetIUpdate.getResolvedTypeChangeTemplate;
 
 
 public class Infer {
 
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
-    private static Map<Tuple2<String, String>, String> fileNameTypechange = new HashMap<>(){{
+    public static Path outputFolder = Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output");
 
-//        put(Tuple.of("java.io.File", "java.nio.file.Path"), "FileToPath.jsonl");
-//        put(Tuple.of("java.lang.String", "java.util.UUID"), "StringToUUID.jsonl");
-//        put(Tuple.of("java.lang.String", "java.net.URI"), "StringToURI.jsonl");
-//        put(Tuple.of("java.lang.String", "java.util.regex.Pattern"), "StringToPattern.jsonl");
-//        put(Tuple.of("java.lang.String", "java.utilSet<java.lang.String>"), "StringToSet.jsonl");
-//        put(Tuple.of("java.lang.String", "java.util.File"), "StringToFile.jsonl");
-//        put(Tuple.of("java.net.URL", "java.net.URI"), "URLToURI.jsonl");
-//        put(Tuple.of("java.net.URI", "java.net.URL"), "URIToURL.jsonl");
-//
-//        put(Tuple.of("java.lang.String", "java.util.Optional<java.lang.String>"), "StringToOptional.jsonl");
-//
-//
-//        put(Tuple.of("long", "java.time.Duration"), "longToDuration.jsonl");
-//        put(Tuple.of("long", "java.time.Instant"), "longToInstant.jsonl");
-//        put(Tuple.of("java.lang.Long", "java.time.Duration"), "longToDuration.jsonl");
-//        put(Tuple.of("java.util.Date", "java.lang.Long"), "DateToLong.jsonl");
-//        put(Tuple.of("java.util.Date", "java.time.LocalDate"), "DateToLocalDate.jsonl");
-//
-//
-        put(Tuple.of("java.util.List", "java.util.Set"), "listToSet.jsonl");
-//        put(Tuple.of("java.util.Set", "com.google.common.collect.ImmutableSet"), "SetToImmutable.jsonl"); // list
-//        put(Tuple.of("java.util.Map", "com.google.common.collect.ImmutableMap"), "MapToImmutable.jsonl");
-//        put(Tuple.of("java.util.Stack", "java.util.Deque"), "StackToDeque.jsonl"); //
-//
-//        put(Tuple.of("java.util.concurrent.Callable", "java.util.function.Supplier"), "CallableToSupplier.jsonl");
-//        put(Tuple.of("java.util.function.Function", "java.util.function.ToDoubleFunction"), "FunctonToToDouble.jsonl");
-//        put(Tuple.of("java.util.function.Function", "java.util.function.ToIntFunction"), "FunctonToToInt.jsonl");
-//        put(Tuple.of("java.util.Optional", "java.util.OptionalInt"), "OptionalToOptionalInt.jsonl");
-//
-//
-//        put(Tuple.of("long", "java.util.concurrent.atomic.AtomicLong"), "longToAtomicLong.jsonl"); // int boolean
-//        put(Tuple.of("java.util.Map", "java.util.concurrent.ConcurrentHashMap"), "MapToConcurrent.jsonl");
-//        put(Tuple.of("java.util.concurrent.BlockingQueue", "java.util.Queue"), "BlockingQueToQueue.jsonl");
-
-
-
-//        put(Tuple.of("org.apache.hadoop.hbase.KeyValue", "org.apache.hadoop.hbase.Cell"), "keyValueToCell.jsonl");
-
-//        put(Tuple.of("java.lang.String", "java.util.UUID"), "StringToUUID.jsonl");
+    private static List<Tuple2<String, String>> fileNameTypechange = new ArrayList<>() {{
+        add(Tuple.of("java.io.File", "java.nio.file.Path"));
+        add(Tuple.of("java.util.List", "java.util.Set"));
+        add(Tuple.of("java.lang.String", "java.util.UUID"));
+        add(Tuple.of("java.lang.String", "java.net.URI"));
+        add(Tuple.of("java.lang.String", "java.util.regex.Pattern"));
+        add(Tuple.of("java.lang.String", "java.utilSet<java.lang.String>"));
+        add(Tuple.of("java.lang.String", "java.util.File"));
+        add(Tuple.of("java.net.URL", "java.net.URI"));
+        add(Tuple.of("java.net.URI", "java.net.URL"));
+        add(Tuple.of("java.lang.String", "java.util.Optional<java.lang.String>"));
+        add(Tuple.of("long", "java.time.Duration"));
+        add(Tuple.of("long", "java.time.Instant"));
+        add(Tuple.of("java.lang.Long", "java.time.Duration"));
+        add(Tuple.of("java.util.Date", "java.lang.Long"));
+        add(Tuple.of("java.util.Date", "java.time.LocalDate"));
+        add(Tuple.of("java.util.List", "java.util.Set"));
+        add(Tuple.of("java.util.Set", "com.google.common.collect.ImmutableSet")); // list
+        add(Tuple.of("java.util.Map", "com.google.common.collect.ImmutableMap"));
+        add(Tuple.of("java.util.Stack", "java.util.Deque")); //
+        add(Tuple.of("java.util.concurrent.Callable", "java.util.function.Supplier"));
+        add(Tuple.of("java.util.function.Function", "java.util.function.ToDoubleFunction"));
+        add(Tuple.of("java.util.function.Function", "java.util.function.ToIntFunction"));
+        add(Tuple.of("java.util.Optional", "java.util.OptionalInt"));
+        add(Tuple.of("long", "java.util.concurrent.atomic.AtomicLong")); // int boolean
+        add(Tuple.of("java.util.Map", "java.util.concurrent.ConcurrentHashMap"));
+        add(Tuple.of("java.util.concurrent.BlockingQueue", "java.util.Queue"));
+        add(Tuple.of("org.apache.hadoop.hbase.KeyValue", "org.apache.hadoop.hbase.Cell"));
+        add(Tuple.of("java.lang.String", "java.util.UUID"));
 
     }};
 
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         MyLogger.setup();
-//      Short circuit for test
-        var st1 = ASTUtils.getStatement("DefaultServer.setRootHandler(new CanonicalPathHandler().setNext(new PathHandler().addPrefixPath(\"/path\",new ResourceHandler().setResourceManager(new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/innerSymlink\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))));");
-        var st2 = ASTUtils.getStatement("DefaultServer.setRootHandler(new CanonicalPathHandler().setNext(new PathHandler().addPrefixPath(\"/path\",new ResourceHandler(new PathResourceManager(newSymlink,10485760,true,rootPath.toAbsolutePath().toString().concat(\"/innerSymlink\"))).setDirectoryListingEnabled(false).addWelcomeFiles(\"page.html\"))));");
-        GetIUpdate gu = new GetIUpdate();
-
-        IUpdate upd1 = gu.getUpdate(st1.get(), st2.get());
-        List<Update> updates1 = explainableUpdates((Update) upd1);
-
-         var popularTypeChanges = ASTUtils.getPopularTypeChanges(fileNameTypechange);
-
-        for(var tc: popularTypeChanges) {
-            Tuple2<String, String> typeChange = Tuple.of(pretty(tc.getKey()._1()), pretty(tc.getKey()._2()));
-            System.out.println(pretty(tc.getKey()._1()) + " -> " + pretty(tc.getKey()._2()));
-            System.out.println("==============");
-            List<Update> updates = tc.getValue().stream()
-                    .flatMap(instance -> instance.getCodeMappingList().stream().filter(x -> !ASTUtils.isNotWorthLearning(x))
-                            .flatMap(cm -> inferTransformation(cm, instance).stream()))
-                    .collect(toList());
-            Map<Tuple2<String, String>, List<Update>> groupedByTemplates = updates.stream()
-                    .collect(groupingBy(x -> ((Explanation) x.getExplanation()).getMatchReplace()));
-            writeAsJson(fileNameTypechange.get(typeChange), groupedByTemplates);
-            System.out.println();
+        for (var en : ASTUtils.getCommitsFor(fileNameTypechange).entrySet()) {
+            CompletableFuture[] futures = en.getValue().entrySet()
+                    .stream().flatMap(x -> x.getValue().stream().flatMap(commit -> AnalyzeCommit(x.getKey(), commit)))
+                    .toArray(CompletableFuture[]::new);
+            CompletableFuture.allOf(futures).join();
         }
-        try {
-            Files.write(outputFolder.resolve("PopularTypeChanges.json"),
-                    new Gson().toJson(fileNameTypechange, Map.class).getBytes(), StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println();
     }
 
+    public static Stream<CompletableFuture<Void>> AnalyzeCommit(Project p, String commit) {
 
-    private static List<Update> inferTransformation(CodeMapping cm, TypeChangeInstance tci) {
+//        if(!commit.equals("f6ca9e9025cce3ab7f012be183a55fcad2b709f6"))
+//            return Stream.empty();
 
-        String nameB4 = tci.getNameB4(), nameAfter = tci.getNameAfter();
+        System.out.println("Analyzing commit " + commit + " " + p.getName());
+        // Call Refactoring Miner
+        var response = HttpUtils.makeHttpRequest(Map.of("purpose", "RMiner",
+                "commit", commit, "project", p.getName(), "url", p.getUrl()));
+
+        if (response.isEmpty()) {
+            System.out.println("REFACTORING MINER RESPONSE IS EMPTY !!!!! ");
+            return Stream.empty();
+        }
+
+        Response response1 = new Gson().fromJson(response.get(), Response.class);
+
+        // All the collected refactorings
+        List<TypeChange> allRefactorings = response1.commits.stream().flatMap(x -> x.refactorings.stream())
+                .collect(toList());
+
+        // All the reported renames
+        Set<Tuple2<String, String>> allRenames = allRefactorings.stream().filter(r -> !r.getBeforeName().equals(r.getAfterName()))
+                .map(r -> Tuple.of(r.getBeforeName(), r.getAfterName())).collect(toSet());
+
+
+        // 5299
+        // Reported Type Change * MatchReplace templates
+        Map<Tuple2<String, String>, Tuple2<String, String>> typeChange_template = allRefactorings.stream().filter(x -> x.getB4Type() != null)
+                .collect(groupingBy(r -> Tuple.of(r.getB4Type(), r.getAfterType())))
+                .entrySet().stream()
+                .flatMap(x -> getResolvedTypeChangeTemplate(x.getKey(), x.getValue()).stream().map(t->Tuple.of(x.getKey(), t)))
+                .collect(toMap(Tuple2::_1, Tuple2::_2));
+
+         return allRefactorings.stream().filter(x -> x.getB4Type() != null).flatMap(rfctr -> {
+             Tuple2<String, String> typeChange = Tuple.of(rfctr.getB4Type(), rfctr.getAfterType());
+
+             if(!typeChange_template.containsKey(typeChange)) {
+                System.out.println("COULD NOT CAPTURE THE TYPE CHANGE PATTERN FOR " + rfctr.getB4Type()
+                        + "    " + rfctr.getAfterType());
+                return Stream.empty();
+            }
+
+             return getAsCodeMapping(p.getUrl(), rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+
+                     // Restrict input to a particular statement mapping
+                     //.filter(c -> c.getB4().contains("return gf.apply(n) + hf.apply(n.getState());"))
+
+                    .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames))
+                            .thenApply(ls -> ls.stream().map(a -> new Gson()
+                                    .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
+                                    .collect(joining("\n")))
+                            .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
+                                    .writeToFile(s,"ConcurrentOp.jsonl")));
+        });
+
+    }
+//https://github.com/Graylog2/graylog2-server/commit/dcf7c59ac0853401dd3aa9395653d674c7f14bd6?diff=split#diff-feabaeebdf2909064687134cc0dc3776R146
+
+    private static List<Update> inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames) {
 
         List<Update> explainableUpdates = new ArrayList<>();
-        String stmtB4 = cm.getB4();
-        String stmtAftr = CombyUtils.performIdentifierRename(nameB4, nameAfter, cm.getAfter());
+        String stmtB4 = codeMapping.getB4();
+        String nameB4 = typeChange.getBeforeName();
+        String nameAfter = typeChange.getAfterName();
 
-        var stmt_b = ASTUtils.getStatement(stmtB4.replace("\n",""));
-        var stmt_a = ASTUtils.getStatement(stmtAftr.replace("\n",""));
 
-        ASTUtils.printCodeMappingStuff(cm, nameB4, nameAfter, stmtB4, stmtAftr, stmt_b, stmt_a);
+        String stmtAftr = CombyUtils.performIdentifierRename(nameB4, nameAfter, codeMapping.getAfter());
+        for (Tuple2<String, String> rn : otherRenames)
+            if (stmtB4.contains(rn._1()) && stmtAftr.contains(rn._2()))
+                stmtAftr = CombyUtils.performIdentifierRename(rn._1(), rn._2(), codeMapping.getAfter());
+
+        var stmt_b = ASTUtils.getStatement(stmtB4.replace("\n", ""));
+        var stmt_a = ASTUtils.getStatement(stmtAftr.replace("\n", ""));
+
+        if(stmt_a.isEmpty() || stmt_b.isEmpty())
+            return new ArrayList<>();
+
+        LOGGER.info(String.join("\n", nameB4 + " -> " + nameAfter,
+                String.join(",", nodeClassForType(stmt_b.get().getNodeType()).toString(), stmtB4.replace("\n", "")),
+                String.join(",", nodeClassForType(stmt_a.get().getNodeType()).toString(), stmtAftr.replace("\n", "")),
+                codeMapping.getReplcementInferredList().stream().map(ReplacementInferred::getReplacementType).collect(joining(" "))));
 
         // If the number of tokens are too large skip
         NodeCounter nc = new NodeCounter();
         stmt_b.get().accept(nc);
-        if(nc.getCount() > 50){
+        if (nc.getCount() > 50) {
             LOGGER.info("TOO LARGE!!!");
             return explainableUpdates;
         }
 
-        GetIUpdate gu = new GetIUpdate();
+        GetIUpdate gu = new GetIUpdate(codeMapping, typeChange);
         IUpdate upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
-        if (upd instanceof NoUpdate){
+        if (upd instanceof NoUpdate) {
             LOGGER.info("NO UPDATE FOUND!!!");
             return explainableUpdates;
         }
@@ -142,14 +179,9 @@ public class Infer {
         if (explainableUpdates.isEmpty())
             LOGGER.info("NO EXPLAINABLE UPDATE FOUND!!!");
 
-        for(var e: explainableUpdates){
-            e.setProject_commit_cu_los(new InferredMappings.Instance(cm.getB4(), cm.getAfter(), e.getBeforeStr(), e.getAfterStr(), extractProject(cm.getUrlbB4()), extractCommit(cm.getUrlbB4())
-                    ,tci.getCompilationUnit(), Tuple.of(extractLineNumber(cm.getUrlbB4()), extractLineNumber(cm.getUrlAftr()))
-            , Tuple.of(nameB4, nameAfter)));
+        for (var expln : explainableUpdates)
+            LOGGER.info((((Explanation) expln.getExplanation()).getMatchReplace()).toString());
 
-
-            LOGGER.info((((Explanation)e.getExplanation()).getMatchReplace()).toString());
-        }
 
         System.out.println("----------");
 
@@ -157,7 +189,7 @@ public class Infer {
     }
 
 
-    public static List<Update> explainableUpdates(Update u){
+    public static List<Update> explainableUpdates(Update u) {
         // Collect all updates!
         Collection<Update> allUpdates = Stream.concat(Stream.of(u), Update.getAllDescendants(u))
                 .filter(i -> i.getExplanation() instanceof Explanation)
@@ -167,15 +199,15 @@ public class Infer {
                 x.getAfter().getPos(), x.getAfter().getEndPos())), collectingAndThen(toList(), x -> x.stream().findFirst().get())))
                 .values();
 
-        if(allUpdates.size() == 1)
+        if (allUpdates.size() == 1)
             return new ArrayList<>(allUpdates);
 
         // IF Descendants explain the change partially then remove descendants
         // IF Descendants explain the change incorrectly then remove descendants
         // IF descendants completely explain the change, then remove the ancestors
-
+        Map<Update, List<Update>> merges = new HashMap<>();
         var removeRedundantUpdates = new ArrayList<Update>();
-        for(var i : allUpdates){
+        for (var i : allUpdates) {
             List<Update> allDescendants = Update.getAllDescendants(i)
                     .filter(x -> x.getExplanation() instanceof Explanation)
                     .filter(allUpdates::contains)
@@ -183,29 +215,43 @@ public class Infer {
 
             List<Update> simplestDescendants = removeSubsumedEdits(allDescendants);
             boolean applyDesc = Update.applyUpdatesAndMatch(simplestDescendants, i.getBeforeStr(), i.getAfterStr());
-            if(applyDesc)
-                removeRedundantUpdates.add(i);
-            else removeRedundantUpdates.addAll(simplestDescendants);
-
+            if (applyDesc) {
+                if(!i.getAsInstance().isRelevant())
+                    removeRedundantUpdates.add(i);
+            }
+            else
+                merges.put(i, simplestDescendants);
         }
 
         allUpdates = allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
 
-        if(allUpdates.size() == 1)
-            return new ArrayList<>(allUpdates);
+        for (var upd : allUpdates) {
+            if (merges.containsKey(upd)) {
+                Tuple2<Update, List<Update>> candidates = Tuple.of(upd, merges.get(upd));
+                AbstractExplanation e = candidates._1().getExplanation();
+                for (var child : candidates._2()) {
+                    e = Explanation.merge((Explanation) e, (Explanation) child.getExplanation());
+                    if (e instanceof NoExplanation)
+                        break;
+                    System.out.println();
+                }
+                if (e instanceof Explanation) {
+                    if(candidates._1().getExplanation() instanceof  Explanation)
+                        if(((Explanation)e).getMatchReplace().equals(((Explanation) candidates._1().getExplanation()).getMatchReplace()))
+                            continue;
+                    upd.setExplanation(e);
+                }
+            }
+        }
 
-        // Removed subsumed edits .... keep the simplest possible explanation
-        return removeSubsumedEdits(allUpdates);
-
-//                .filter(x -> x.getSubUpdates().size() ==0 ||  !x.getSubUpdates().stream().allMatch(y -> y.getExplanation() instanceof Explanation))
-//                .collect(toList());
+        return new ArrayList<>(allUpdates);
     }
 
     public static List<Update> removeSubsumedEdits(Collection<Update> allUpdates) {
         List<Update> subsumedEdits = new ArrayList<>();
-        for(var i : allUpdates){
-            for (var j : allUpdates){
-                if(isSubsumedBy(i.getBefore(), j.getBefore()) || isSubsumedBy(i.getAfter(), j.getAfter()) ){
+        for (var i : allUpdates) {
+            for (var j : allUpdates) {
+                if (isSubsumedBy(i.getBefore(), j.getBefore()) || isSubsumedBy(i.getAfter(), j.getAfter())) {
                     subsumedEdits.add(j);
                 }
             }

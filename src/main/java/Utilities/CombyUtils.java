@@ -3,7 +3,6 @@ package Utilities;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import type.change.comby.CombyMatch;
 import type.change.comby.CombyRewrite;
 import type.change.comby.Environment;
@@ -16,9 +15,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
+import static Utilities.CaptureMappingsLike.STOCK_TVs;
+import static java.util.stream.Collectors.*;
 
 public class CombyUtils {
 
@@ -28,18 +29,8 @@ public class CombyUtils {
         source = source.replace("\\\"", "\"");
 
         try {
-            String command = "echo '" + source + "' | comby '" + template + "' -stdin -json-lines -match-only -matcher "+
-                    (language == null ? ".java" : "")+
-                    " 'foo'";
-            String[] cmd = {
-                    "/bin/sh",
-                    "-c",
-                    command
-            };
-            Process p = Runtime.getRuntime().exec(cmd);
-
-            String result = new BufferedReader(new InputStreamReader(p.getInputStream()))
-                    .lines().collect(joining("\n"));
+//            System.out.println("MATCH        "  + template + "       " + source);
+            String result = getMatchCmd(template, source, language);
             CombyMatch cm = new Gson().fromJson(result, CombyMatch.class);
 
             if(cm != null) {
@@ -52,13 +43,35 @@ public class CombyUtils {
             return Optional.empty();
         }
     }
-    public static Optional<CombyMatch> getPerfectMatch(String template, String source) {
-        return getMatch(template, source, null)
-                .filter(cm -> isPerfectMatch(source, cm));
-//                .filter(cm -> cm.getMatches().size() == 1)
-//                .filter(cm -> cm.getMatches().get(0).getMatched().equals(source.replace("\\\"", "\"")));
 
+    public static String getMatchCmd(String template, String source, String language) throws IOException {
+        String command = "echo '" + source + "' | comby '" + template + "' -stdin -json-lines -match-only -matcher "+
+                (language == null ? ".java" : language)+
+                " 'foo'";
+        String[] cmd = {
+                "/bin/sh",
+                "-c",
+                command
+        };
+
+        Process p = Runtime.getRuntime().exec(cmd);
+
+
+        String result = new BufferedReader(new InputStreamReader(p.getInputStream()))
+                .lines().collect(joining("\n"));
+        return result;
     }
+
+
+    public static Optional<CombyMatch> getPerfectMatch(Tuple2<String, Predicate<String>> template, String source, String language) {
+        return template._2().test(source) ? getMatch(template._1(), source, language)
+                .filter(cm -> isPerfectMatch(source, cm)) : Optional.empty();
+    }
+
+//    public static Optional<CombyMatch> getPerfectMatch(String template, String source, String language) {
+//        return getMatch(template, source, language)
+//                .filter(cm -> isPerfectMatch(source, cm));
+//    }
 
     public static boolean isPerfectMatch(String source, CombyMatch cm) {
         return cm.getMatches().size() == 1
@@ -66,24 +79,55 @@ public class CombyUtils {
     }
 
 
-    public static List<String> getAllTemplateVariableNames(String template){
-        List<String> allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
-                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()))
-                .map(x -> {
-                    if (x.getValue().startsWith("[")) return x.getValue().substring(1, x.getValue().length() - 1);
-                    else if (x.getValue().contains("~")) return x.getValue().substring(0, x.getValue().indexOf("~"));
-                    else return x.getValue();
-                }).collect(toList());
+    public static boolean isPerfectMatch(String source, Match cm) {
+        return cm.getMatched().equals(source.replace("\\\"", "\""));
+    }
+    //./RefactoringMiner -c /Users/ameya/Research/TypeChangeStudy/Corpus/Project_neo4j/neo4j 77a5e62f9d5a56a48f82b6bdd8519b18275bef1d -json /Users/ameya/Research/TypeChangeStudy/VanillaRMiner/output.json
 
-        return allMatches;
+
+    public static Tuple2<String, Map<String, String>>  renameTemplateVariable(String template, Function<String, String> rename){
+        List<Tuple2<String, Environment>> allMatches = matchTemplateVariables(template)
+                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+                        .map(z -> Tuple.of(y.getMatched(), z))))
+                .collect(toList());
+        int n = allMatches.size();
+        Map<String, String> renames = new HashMap<>();
+        for(int i = 0; i < n; i++){
+            Tuple2<String, Environment> t = allMatches.get(i);
+            Environment env = t._2();
+
+            String value;
+            if (env.getValue().startsWith("[")) value = env.getValue().substring(1, env.getValue().length() - 1);
+            else if(env.getValue().contains("~")) value = env.getValue().substring(0, env.getValue().indexOf("~"));
+            else value = env.getValue();
+
+            renames.put(value, rename.apply(value));
+            String renamedTemplateVar = t._1().replace(value, renames.get(value));
+            template = template.replace(t._1(), renamedTemplateVar);
+            allMatches = matchTemplateVariables(template)
+                    .stream().flatMap(z -> z.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+                            .map(v -> Tuple.of(y.getMatched(), v))))
+                    .collect(toList());
+        }
+        return Tuple.of(template, renames);
 
     }
 
 
+
+
+
     public static String  renameTemplateVariable(String template, Map<String, String> renames){
+
+        if(renames.size() == 0)
+            return template;
+
+        renames = renames.entrySet().stream().filter(x->!x.getKey().equals(x.getValue()))
+                .collect(toMap(x->x.getKey(), x->x.getValue()));
+
         List<Tuple2<String, Environment>> allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
                 .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                        .map(z -> Tuple.of(y.getMatched(), z))))
+                        .map(z -> Tuple.of(y.getMatched().replace("\\\\","\\"), z))))
                 .collect(toList());
         int n = allMatches.size();
 
@@ -100,11 +144,16 @@ public class CombyUtils {
             }
             allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
                     .stream().flatMap(z -> z.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                            .map(v -> Tuple.of(y.getMatched(), v))))
+                            .map(v -> Tuple.of(y.getMatched().replace("\\\\","\\"), v))))
                     .collect(toList());
         }
         return template;
 
+    }
+
+    public static Optional<CombyMatch> matchTemplateVariables(String template) {
+        return STOCK_TVs.containsKey(template) ? STOCK_TVs.get(template) :
+                CombyUtils.getMatch(":[:[var]]", template, null);
     }
 
     public static Optional<CombyRewrite> rewrite(String matcher, String rewrite, String source) {
@@ -117,9 +166,7 @@ public class CombyUtils {
                     "-c",
                     command
             };
-
-
-
+//            System.out.println("REWRITE        "  + matcher + "       " + rewrite + "          " + source);
             Process p = Runtime.getRuntime().exec(cmd);
             String result = new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
             CombyRewrite cr = new Gson().fromJson(result, CombyRewrite.class);
@@ -147,14 +194,13 @@ public class CombyUtils {
                     "-c",
                     command
             };
+//            System.out.println("SUBSTITUTE        "  + template + substitutions.entrySet().stream().map(Tuple::fromEntry)
+//                    .map(Tuple2::toString)
+//                    .collect(joining(",")));
 
             Process p = Runtime.getRuntime().exec(cmd);
             String result = new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
 //            CombyRewrite cr = new Gson().subsfromJson(result, CombyRewrite.class);
-            if (result == null){
-                System.out.println("No substitution found");
-                result = template;
-            }
             return result;
         } catch (IOException e) {
             e.printStackTrace();
@@ -170,12 +216,12 @@ public class CombyUtils {
                 stmtAftr = cr.get().getRewrittenSource();
             }
         }
-        return stmtAftr;
+        return stmtAftr.replace("\n","");
     }
 
-    public static boolean isDecomposable(Tuple3<String, String, Match> x) {
-        return getAllTemplateVariableNames(x._2()).stream().anyMatch(s -> s.endsWith("r"));
-    }
+//    public static boolean isDecomposable(String template) {
+//        return getAllTemplateVariableNames(template).stream().anyMatch(s -> s.endsWith("r"));
+//    }
 
 
     public static class SubstitutionInput {
@@ -183,28 +229,10 @@ public class CombyUtils {
         public String value;
 
         public SubstitutionInput(String variable, String value){
-            this.variable = variable;//hackVarName(variable);
+            this.variable = variable;
             this.value = value;
         }
 
-        //TODO: Don't need this hack any more? then remove!
-        public String hackVarName(String variable){
-            var renames = new HashMap<String, String>() {{
-                put("9x1c", "~([A-Z][a-z0-9]+)+");
-                put("43c", "~[A-Z]\\w*");
-                put("46c", "~[A-Z]\\w*");
-                put("33c", "~\\s*");
-                put("29c","~[\\+\\-\\*\\&]");
-                put("50","~\\d");
-                put("51","~\\d");
-                put("52","~[L-l]");
-                put("55","~[L-l]");
-                put("53","~0[xX][0-9a-fA-F]+");
-                put("54","~0[xX][0-9a-fA-F]+");
-
-            }};
-            return renames.containsKey(variable) ? variable + renames.get(variable) : variable;
-        }
 
         public void setVariable(String variable) {
             this.variable = variable;
@@ -228,26 +256,10 @@ public class CombyUtils {
         }
     }
 
-
-    public static void main(String[] args){
-
-        String renamedTemplate = renameTemplateVariable(":[9x1c~([A-Z][a-z0-9]+)+].:[[10c]]:[12](:[11])", new HashMap<>() {{
-            put("9x1c", "29x1c");
-            put("10c", "2x10c");
-            put("12", "2x12");
-            put("11", "2x11");
-        }});
-
-        System.out.println(renamedTemplate);
-        String res = substitute(":[1] :[2]", new HashMap<>() {{
-            put("1", "Ameya");
-            put("2", "Ketkar");
-        }});
-        System.out.println(res);
-
-    }
-
     public static String getAsCombyVariable(String x){
         return x.contains(":[") ? x : ":["+x+"]";
     }
+
+
+
 }

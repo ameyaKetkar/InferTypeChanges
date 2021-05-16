@@ -1,8 +1,15 @@
 package type.change.treeCompare;
 
+import Utilities.CaptureMappingsLike;
 import Utilities.CombyUtils;
+import Utilities.InferredMappings;
 import Utilities.InferredMappings.Instance;
+import Utilities.RMinerUtils;
+import Utilities.RMinerUtils.TypeChange;
 import com.github.gumtreediff.tree.ITree;
+import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
+import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
+import io.vavr.Tuple;
 import type.change.comby.CombyRewrite;
 
 import java.util.*;
@@ -11,24 +18,25 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.toList;
 
 public class Update implements IUpdate {
+
     private final ITree before;
     private final ITree after;
     private final String beforeStr;
     private final String afterStr;
     private AbstractExplanation explanation;
     private List<Update> subUpdates;
-    private Instance project_commit_cu_los;
+    private final Instance project_commit_cu_los;
+//    private boolean isRelevant;
 
-
-    public Update(ITree before, ITree after, String beforeStr, String afterStr) {
+    public Update(ITree before, ITree after, String beforeStr, String afterStr,AbstractExplanation explanation, CodeMapping codeMapping, TypeChange typeChange) {
         this.before = before;
         this.after = after;
         this.beforeStr = beforeStr;
         this.afterStr = afterStr;
         this.subUpdates = new ArrayList<>();
-
+        this.explanation = explanation;
+        this.project_commit_cu_los = new Instance(codeMapping, this, typeChange, explanation);
     }
-
 
     public static boolean isSamePosWise(ITree t1, ITree t2){
         return t1.getPos() == t2.getPos() && t1.getEndPos() == t2.getEndPos();
@@ -44,20 +52,12 @@ public class Update implements IUpdate {
 
     public Optional<String> applyCutPaste(String source){
         if(explanation instanceof NoExplanation) return Optional.empty();
-        Explanation expl = (Explanation) this.explanation;
-        if(source.contains(getBeforeStr())){
-            return Optional.of(source.replace(getBeforeStr(), getAfterStr()));
-        }
+        if(source.contains(getBeforeStr())) return Optional.of(source.replace(getBeforeStr(), getAfterStr()));
         return Optional.empty();
-//        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(expl.getMatchReplace()._1(), expl.getMatchReplace()._2(), source);
-//        return rewrite.map(CombyRewrite::getRewrittenSource);
     }
 
     public static Stream<Update> getAllDescendants(Update u){
-        return u.getSubUpdates().stream()
-//                .filter(x -> !isSamePosWise(x.getBefore(), u.getBefore()) && !isSamePosWise(x.getAfter(), u.getAfter()))
-                .flatMap(x -> Stream.concat(Stream.of(x), getAllDescendants(x)));
-
+        return u.getSubUpdates().stream().flatMap(x -> Stream.concat(Stream.of(x), getAllDescendants(x)));
     }
 
     public boolean isIsomorphic(){
@@ -94,10 +94,6 @@ public class Update implements IUpdate {
         return subUpdates;
     }
 
-    public void setExplanation(AbstractExplanation explanation) {
-        this.explanation = explanation;
-    }
-
     public String getBeforeStr() {
         return beforeStr;
     }
@@ -106,11 +102,7 @@ public class Update implements IUpdate {
         return afterStr;
     }
 
-    public void setProject_commit_cu_los(Instance project_commit_cu_los) {
-        this.project_commit_cu_los = project_commit_cu_los;
-    }
-
-    public Instance getProject_commit_cu_los() {
+    public Instance getAsInstance() {
         return project_commit_cu_los;
     }
 
@@ -130,5 +122,14 @@ public class Update implements IUpdate {
             }
         }
         return false;
+    }
+
+//    public boolean isRelevant() {
+//        return this.isRelevant;
+//    }
+
+    public void setExplanation(AbstractExplanation e) {
+        this.explanation = e;
+//        this.isRelevant = explanation instanceof Explanation && isRelevant((Explanation) explanation, getAsInstance());
     }
 }
