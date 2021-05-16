@@ -10,12 +10,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-
-//import gr.uom.java.xmi.LocationInfo;
-//import gr.uom.java.xmi.decomposition.AbstractCodeMapping;
-//import gr.uom.java.xmi.diff.*;
-//import org.apache.commons.lang3.tuple.ImmutablePair;
-//import org.refactoringminer.api.Refactoring;
+import gr.uom.java.xmi.LocationInfo;
+import gr.uom.java.xmi.decomposition.AbstractCodeMapping;
+import gr.uom.java.xmi.diff.*;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.refactoringminer.api.Refactoring;
 
 public class RMinerUtils {
 

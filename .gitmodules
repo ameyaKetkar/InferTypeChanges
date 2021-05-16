@@ -1,0 +1,3 @@
+[submodule "RefactoringMiner"]
+	path = RefactoringMiner
+	url = https://github.com/ameyaKetkar/RefactoringMiner.git
