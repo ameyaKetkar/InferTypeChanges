@@ -38,13 +38,10 @@ public class Infer {
         Path outputFolder = Path.of(args[1]);
         MyLogger.setup();
         Path inputFile = Path.of(args[0]);
-        GetRelevantCommits.Input input = new Gson().fromJson(Files.readString(inputFile), GetRelevantCommits.Input.class);
-        for (var en : input.inputTypeChangeCommits) {
-            CompletableFuture[] futures = en.projectUrlSHA
-                    .stream().flatMap(commit -> AnalyzeCommit(commit._1(), commit._2(), commit._3(), outputFolder))
-                    .toArray(CompletableFuture[]::new);
-            CompletableFuture.allOf(futures).join();
-        }
+        CompletableFuture[] futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
+                .flatMap(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFolder))
+                .toArray(CompletableFuture[]::new);
+        CompletableFuture.allOf(futures).join();
     }
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFolder) {

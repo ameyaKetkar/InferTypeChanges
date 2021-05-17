@@ -1,0 +1,4 @@
+python3 AdvancedServer.py "/home/ameya/Research/InferTypeChanges/RefactoringMiner-2.1.0/bin/" "/home/ameya/Research/Corpus/" "/home/ameya/Research/HttpServer/Output/" "/home/ameya/Research/HttpServer/Input/"
+
+
+
