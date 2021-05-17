@@ -128,7 +128,8 @@ public class InferredMappings {
             isRelevant = upd.getExplanation() instanceof Explanation
                     && ((TemplateVariableToCodeBefore.containsValue(Names._1()) && TemplateVariableToCodeAfter.containsValue(Names._1()))
                     // Because the statements are normalized to renames
-                    || (varOnLHS(Names._1(), Before, OriginalCompleteBefore) && (varOnLHS(Names._1(), After, OriginalCompleteAfter) || varOnLHS(Names._2(), After, OriginalCompleteAfter)))
+                    || (varOnLHS(Names._1(), Before, OriginalCompleteBefore) &&
+                    (varOnLHS(Names._1(), After, OriginalCompleteAfter) || varOnLHS(Names._2(), After, OriginalCompleteAfter)))
                     || (isReturnExpression(OriginalCompleteBefore, Before) && isReturnExpression(OriginalCompleteAfter, After)));
             RelevantImports = explanation instanceof Explanation ? relevantImports(tc, (Explanation) explanation) : new ArrayList<>();
 
@@ -159,10 +160,10 @@ public class InferredMappings {
 
         private boolean isReturnExpression(String originalComplete, String codeSnippet) {
             Optional<Utilities.comby.Match> cm = CombyUtils.getPerfectMatch(CaptureMappingsLike.PATTERNS_HEURISTICS.get("ReturnStmt"),
-                    originalComplete, null)
+                    originalComplete.replace(";",""), null)
                     .map(x -> x.getMatches().get(0));
             return cm.map(match -> match.getEnvironment().stream().anyMatch(x -> x.getVariable().equals("r")
-                        && x.getValue().replace("\\\"", "\"").contains(codeSnippet)))
+                        && x.getValue().replace("\\\"", "\"").equals(codeSnippet)))
                     .orElse(false);
         }
 

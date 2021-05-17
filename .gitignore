@@ -15,3 +15,7 @@ lib/
 Input/input.txt
 
 src/main/python/comby/__pycache__/
+
+__pycache__/
+
+Deploy.py

@@ -18,7 +18,7 @@ public class CaptureMappingsLike {
             put("Nothing",Tuple.of("", s -> s.equals("")));
             put("Cast",Tuple.of("(:[t:e]):[ex]", s -> s.startsWith("(")));
             put("Negate",Tuple.of("!:[ex]", s -> s.startsWith("!")));
-            put("BinaryOp",Tuple.of(":[r]:[op~[\\+\\-\\*\\&&\\==\\||]+]:[a]", s -> Stream.of("+","-","==","*","&&").anyMatch(s::contains)));
+            put("BinaryOp",Tuple.of(":[r]:[op~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]:[a:e]", s -> Stream.of("+","-","==","*","&&", "!=").anyMatch(s::contains)));
             put("TypeArgs",Tuple.of("<:[tas]>", s -> s.startsWith("<")));
             put("ClassName",Tuple.of(":[c~([A-Z][a-z0-9]+)+]", s -> !s.contains(" ") && !s.contains(",") && !s.contains("(") && s.length()>0 && Character.isUpperCase(s.charAt(0)) && Character.isAlphabetic(s.charAt(0))));
             put("NumberLiteral1",Tuple.of(":[n~\\d]", s -> s.length()>0 && Character.isDigit(s.charAt(0))));

@@ -332,7 +332,8 @@ public class GetIUpdate {
                     .sorted(Comparator.comparingInt(x -> x.getMatched().length()))
                     .collect(Collectors.toList());
             Collections.reverse(matches);
-            for(var m: matches) { currentMatch = getMatch(basicMatch._1(), m, source,
+            for(var m: matches) {
+                currentMatch = getMatch(basicMatch._1(), m, source,
                             basicMatch._1()._2().contains("r") ? List.of("r") : List.of());
                 if (currentMatch.isPresent()) return currentMatch;
 

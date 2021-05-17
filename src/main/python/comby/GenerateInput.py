@@ -47,8 +47,7 @@ def getTypeChangeCommitJson():
 def generateInputFor(typeChanges):
     typechange_commitInfo = getTypeChangeCommitJson()
     for t in typeChanges:
-        ci: TypeChangeCommits = [x for x in typechange_commitInfo if x[0] == t.source_type and x[1] == t.target_type]
-        c: CommitInfo
+        ci = [x for x in typechange_commitInfo if x[0] == t.source_type and x[1] == t.target_type]
         csv = str.join('\n',[str.join(',', [c[0], c[1], c[2]]) for c in ci[0][2]])
         with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/input.txt', 'w+') as f:
             f.write(csv)

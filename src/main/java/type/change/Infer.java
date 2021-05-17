@@ -35,19 +35,19 @@ public class Infer {
 
     public static void main(String[] args) throws IOException {
         ///Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output
-        Path outputFolder = Path.of(args[1]);
         MyLogger.setup();
         Path inputFile = Path.of(args[0]);
+        Path outputFile = Path.of(args[1]);
         CompletableFuture[] futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
-                .flatMap(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFolder))
+                .flatMap(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile))
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
     }
 
-    public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFolder) {
+    public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-//        if(!commit.equals("f6ca9e9025cce3ab7f012be183a55fcad2b709f6"))
-//            return Stream.empty();
+        if(!commit.equals("e9b5effe30cf68820a3dfb00bf736a325313206b"))
+            return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
         // Call Refactoring Miner
@@ -90,14 +90,14 @@ public class Infer {
              return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
 
                      // Restrict input to a particular statement mapping
-                     //.filter(c -> c.getB4().contains("return gf.apply(n) + hf.apply(n.getState());"))
+                     .filter(c -> c.getB4().contains("File file=new File(temp.newFolder(),\"src/main/java/org/MyFoo.java\")"))
 
                     .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames))
                             .thenApply(ls -> ls.stream().map(a -> new Gson()
                                     .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
                                     .collect(joining("\n")))
                             .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
-                                    .writeToFile(s, outputFolder.resolve("output.jsonl"))));
+                                    .writeToFile(s, outputFile)));
         });
 
     }

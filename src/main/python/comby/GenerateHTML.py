@@ -33,7 +33,6 @@ def apply_template_to(write_to_file, data):
 def json_to_html(json_data):
     return json2html.convert(json=json_data, escape=False)
 
-
 def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
     if forWhat == 'Statement Mappings':
         colNames = ['Match', 'Replace', 'Instances','Relevant Instances', 'Commits', 'Project', 'Link']
@@ -55,27 +54,17 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
             body.append([str(v1[c]) for c in colNames])
         apply_template_to(htmlPage, (colNames, body, Title, col_types, ".."))
 
-
 excludeTcs = [('java.lang.String', 'java.util.Optional<:[tar]>')]
 
-res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/Results"
+res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsRemote"
+if not os.path.exists(res):
+    os.mkdir(res)
 
 
-
-with open(os.path.join(parent(res), "ConcurrentOp.jsonl")) as c:
+with open(os.path.join(parent(res), "output.jsonl")) as c:
     lines = c.readlines()
     mappings = [json.loads(l) for l in lines if l != '\n']
     tcTemplate_mapping = {}
-    for m in mappings:
-        if (m['BeforeTypeTemplate'], m['AfterTypeTemplate']) in excludeTcs:
-            continue
-        i= m['Instance']
-        if not i['isRelevant']:
-            if 'return ' + i['Before'] +';' == i['OriginalCompleteBefore']:
-                if 'return ' + i['After'] +";" == i['OriginalCompleteAfter']:
-                    i['isRelevant'] = True
-
-
 
     for m in mappings:
         tcTemplate_mapping.setdefault((m['BeforeTypeTemplate'], m['AfterTypeTemplate']),
