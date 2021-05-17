@@ -102,7 +102,7 @@ public class GetIUpdate {
                 .map(x -> Tuple.of(x.getValue(), resolveType(x, relevantImportsB4)))
                 .filter(x -> x._2().isPresent())
                 .map(x -> x.map2(y -> y.get()))
-                .collect(toMap(x -> x._1(), x -> x._2()));
+                .collect(toMap(x -> x._1(), x -> x._2(), (a,b) -> a));
 
         Map<Boolean, List<String>> relevantImportsAfter = typeChanges.stream()
                 .flatMap(x -> Stream.concat(x.getAddedImportStatements().stream(), x.getUnchangedImportStatements().stream()))
@@ -112,7 +112,7 @@ public class GetIUpdate {
                 .map(x -> Tuple.of(x.getValue(), resolveType(x, relevantImportsAfter)))
                 .filter(x -> x._2().isPresent())
                 .map(x -> x.map2(y -> y.get()))
-                .collect(toMap(x -> x._1(), x -> x._2()));
+                .collect(toMap(x -> x._1(), x -> x._2(),(a,b) -> a));
 
         Tuple2<String, String> s = expl.getMatchReplace().map(x -> performRenameIdentifier(x, c1), x -> performRenameIdentifier(x, c2));
 
