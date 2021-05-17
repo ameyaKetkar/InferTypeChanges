@@ -198,7 +198,7 @@ public class Infer {
                 Tuple2<Update, List<Update>> candidates = Tuple.of(upd, merges.get(upd));
                 AbstractExplanation e = candidates._1().getExplanation();
                 for (var child : candidates._2()) {
-                    e = Explanation.merge((Explanation) e, (Explanation) child.getExplanation());
+                    e = Explanation.mergeExplanations((Explanation) e, (Explanation) child.getExplanation());
                     if (e instanceof NoExplanation)
                         break;
                     System.out.println();

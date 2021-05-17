@@ -3,3 +3,7 @@ python3 AdvancedServer.py "/home/ameya/Research/InferTypeChanges/RefactoringMine
 
 
 python AdvancedServer.py "/Users/ameya/Research/TypeChangeStudy/VanillaRMiner/RefactoringMiner-2.1.0/bin" "/Users/ameya/Research/TypeChangeStudy/Corpus" "/Users/ameya/Research/TypeChangeStudy/HttpServer/Output" "/Users/ameya/Research/TypeChangeStudy/HttpServer/Input"
+
+
+
+//./RefactoringMiner -c /Users/ameya/Research/TypeChangeStudy/Corpus/Project_neo4j/neo4j 77a5e62f9d5a56a48f82b6bdd8519b18275bef1d -json /Users/ameya/Research/TypeChangeStudy/VanillaRMiner/output.json

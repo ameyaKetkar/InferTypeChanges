@@ -19,6 +19,7 @@ import Utilities.comby.CombyMatch;
 import Utilities.comby.Environment;
 import Utilities.comby.Match;
 
+import javax.swing.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -214,34 +215,26 @@ public class GetIUpdate {
     public AbstractExplanation getInstance(String before, String after, Tuple2<Integer, Integer> loc_b4,
                                            Tuple2<Integer, Integer> loc_aftr) {
 
-        Optional<Tuple3<String, String, Match>> explanationBefore;
-
-        if (matchesB4.containsKey(loc_b4)) {
-            explanationBefore = matchesB4.get(loc_b4);
-        } else {
-            explanationBefore = getMatch(before);
-        }
-
+        Optional<Tuple3<String, String, Match>> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
+                : getMatch(before);
         matchesB4.put(loc_b4, explanationBefore);
         if (explanationBefore.isEmpty()) return new NoExplanation();
 
-        Optional<Tuple3<String, String, Match>> explanationAfter;
-        if (matchesAfter.containsKey(loc_aftr)) {
-            explanationAfter = matchesAfter.get(loc_aftr);
-        } else {
-            explanationAfter = getMatch(after);
-        }
+        Optional<Tuple3<String, String, Match>> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
+                : getMatch(after);
         matchesAfter.put(loc_aftr, explanationAfter);
 
         if (explanationAfter.isEmpty() || (explanationBefore.get()._1().equals(explanationAfter.get()._1())
-                && (explanationAfter.get()._1().equals("Identifier") || explanationAfter.get()._1().equals("ClassName")
-        || explanationAfter.get()._1().equals("StringLiteral")) )) return new NoExplanation();
+                && Stream.of("Identifier", "ClassName","StringLiteral").anyMatch(x -> explanationAfter.get()._1().equals(x))))
+            return new NoExplanation();
 
         return new Explanation(explanationBefore.get(), explanationAfter.get());
     }
+
+
+
     static Optional<Tuple3<String, String, Match>> getMatch(Tuple2<String, String> name_template, Match cm, String source,
                                                             List<String> recurssiveTVs) {
-        LinkedHashMap<String, Tuple2<String, Predicate<String>>> patternsHeuristics = CaptureMappingsLike.PATTERNS_HEURISTICS;
 
         Optional<Tuple3<String, String, Match>> result = Optional.empty();
 
@@ -253,8 +246,7 @@ public class GetIUpdate {
             Environment env = cm.getEnvironment().stream().filter(x -> x.getVariable().equals(tv)).findFirst().orElse(null);
             if(env == null)
                 System.out.println();
-            for (var var_values : patternsHeuristics.entrySet()) {
-
+            for (var var_values : CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet()) {
                 Predicate<String> heuristic = var_values.getValue()._2();
                 boolean tv_Val_matches = heuristic.test(env.getValue());
                 boolean anyRemaining = !source.replace("\\\"", "\"").equals(cm.getMatched());
@@ -329,8 +321,7 @@ public class GetIUpdate {
 
         for (var basicMatch : basicMatches) {
             List<Match> matches = basicMatch._2().getMatches().stream()
-                    .sorted(Comparator.comparingInt(x -> x.getMatched().length()))
-                    .collect(Collectors.toList());
+                    .sorted(Comparator.comparingInt(x -> x.getMatched().length())).collect(Collectors.toList());
             Collections.reverse(matches);
             for(var m: matches) {
                 currentMatch = getMatch(basicMatch._1(), m, source,
@@ -344,7 +335,7 @@ public class GetIUpdate {
 
     public static List<String> getAllTemplateVariableName(String template){
 
-        List<String> allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
+        return CombyUtils.getMatch(":[:[var]]", template, null)
                 .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
                         .map(z -> Tuple.of(y.getMatched().replace("\\\\", "\\"), z))))
                 .map(t -> {
@@ -354,7 +345,6 @@ public class GetIUpdate {
                     else return x.getValue();
                 })
                 .collect(toList());
-        return allMatches;
 
     }
 

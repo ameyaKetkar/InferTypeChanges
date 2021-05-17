@@ -59,7 +59,15 @@ public class Explanation extends AbstractExplanation {
         this.MatchReplace = instantiate(baseTemplates);
     }
 
-    public static AbstractExplanation merge(Explanation parent, Explanation child) {
+    /**
+     *
+     * @param parent
+     * @param child
+     * @return Returns an explanation where the parent template is merged with the child template
+     * The merge can happen iff one of the template variables in the parent template perfectly match the before
+     * and after of the child explanation
+     */
+    public static AbstractExplanation mergeExplanations(Explanation parent, Explanation child) {
         try {
             Optional<Tuple2<String, String>> b4 = parent.getTvMapB4().entrySet().stream()
                     .filter(x -> x.getValue().replace("\\\"", "\"").equals(child.getCodeSnippetB4()))
@@ -128,48 +136,6 @@ public class Explanation extends AbstractExplanation {
         return baseTemplates;
     }
 
-//    public Map<String, String> getMappingBetweenBaseAndMatch(){
-//        return CombyUtils.getMatch(baseTemplates._1(), getMatchReplace()._1(), null)
-//                .filter(x -> isPerfectMatch(getMatchReplace()._1(), x))
-//                .stream()
-//                .flatMap(x -> x.getMatches().get(0).getEnvironment().stream())
-//                .collect(toMap(x -> x.getVariable(), x -> x.getValue()));
-//    }
-
-//    public Map<String, String> getMappingBetweenBaseAndReplace(){
-//        return CombyUtils.getMatch(baseTemplates._2(), getMatchReplace()._2(), null)
-//                .filter(x -> isPerfectMatch(getMatchReplace()._1(), x))
-//                .stream()
-//                .flatMap(x -> x.getMatches().get(0).getEnvironment().stream())
-//                .collect(toMap(x -> x.getVariable(), x -> x.getValue()));
-//    }
-
-
-
-    public void setUsageCapturingTV(String name) {
-
-    }
-//
-//    // Assumes that the AST types of the nodes did not match
-//    public void enhanceExplanation() {
-//        List<Tuple2<String, String>> unMappedBeforeTV = getUnMappedTVB4();
-//
-//        // break down these template variables further into templates
-//
-//        List<Tuple2<String, Optional<Tuple3<String, String, Match>>>> finerB4TV = unMappedBeforeTV.stream()
-//                .map(x -> x.map2(source -> GetIUpdate.getMatch(source, CaptureMappingsLike.PATTERNS_HEURISTICS)))
-//                .collect(toList());
-//
-//        List<Tuple2<String, String>> unMappedAfterTV = getUnmappedTVAfter();
-//
-//        List<Tuple2<String, Optional<Tuple3<String, String, Match>>>> finerAfterTV = unMappedAfterTV.stream()
-//                .map(x -> x.map2(source -> GetIUpdate.getMatch(source, CaptureMappingsLike.PATTERNS_HEURISTICS)))
-//                .collect(toList());
-//
-//        System.out.println();
-//
-//    }
-
     public List<Tuple2<String, String>> getUnmappedTVAfter() {
         return tvMapAfter.keySet().stream()
                 .filter(x -> !tvMapAfter.get(x).equals(""))
@@ -212,12 +178,12 @@ public class Explanation extends AbstractExplanation {
        (i) Direct match (l == r)
        (ii) Transformation match (l *= r)
      */
-    private HashMap<String, String> getMatchingTemplateVariablesNewNew() {
+    private Map<String, String> getMatchingTemplateVariablesNewNew() {
         Optional<String> entireB4 = anyTemplateVarMatches(tvMapAfter, explanationBefore._2().getMatched());
-        if(entireB4.isPresent()) return new HashMap<>() {{ put(EntireCodeSnippet, entireB4.get()); }};
+        if(entireB4.isPresent()) return Map.of(EntireCodeSnippet, entireB4.get());;
 
         Optional<String> entireAfter = anyTemplateVarMatches(tvMapB4, explanationAfter._2().getMatched());
-        if (entireAfter.isPresent()) return new HashMap<>() {{ put(entireAfter.get(), EntireCodeSnippet);}};
+        if (entireAfter.isPresent()) return Map.of(entireAfter.get(), EntireCodeSnippet);
 
         return getMatchingTemplateVariables();
 
@@ -225,7 +191,7 @@ public class Explanation extends AbstractExplanation {
 
     private HashMap<String, String> getMatchingTemplateVariables() {
         HashMap<String, String> templateVariableMap = new HashMap<>();
-        // b4 * [After] where value matches
+        // b4TVs * [AfterTVs] where value matches
         Map<String, List<String>> before_afters =
                 tvMapB4.entrySet().stream().filter(x -> !x.getKey().endsWith("c"))
                         .flatMap(x -> tvMapAfter.entrySet().stream()

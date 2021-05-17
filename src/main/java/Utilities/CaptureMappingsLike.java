@@ -13,6 +13,10 @@ import static java.util.stream.Collectors.toMap;
 
 public class CaptureMappingsLike {
 
+
+    // "r" and "c" are special names
+    // "r" should be the left-most temnplate variable if it represents ANY expression
+    // template variables "c" are never considered for generalization
     public static LinkedHashMap<String, Tuple2<String, Predicate<String>>> PATTERNS_HEURISTICS = new LinkedHashMap<>(){
         {
             put("Nothing",Tuple.of("", s -> s.equals("")));
@@ -34,7 +38,7 @@ public class CaptureMappingsLike {
             put("Assignment1",Tuple.of(":[ty:e] :[[nm]]:[28~\\s*]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
             put("Assignment2",Tuple.of(":[mod:e] :[ty:e] :[[nm]]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
             put("Assignment",Tuple.of(":[nm:e]:[28~\\s*]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
-            put("ReturnStmt",Tuple.of("return :[r]", s -> s.contains("return ")));
+            put("ReturnStmt",Tuple.of("return :[e]", s -> s.contains("return ")));
 
             Predicate<String> methodInvocation = s -> s.contains(".") && s.contains("(") && s.contains(")");
             Predicate<String> newInstanceCreation = s -> s.startsWith("new");

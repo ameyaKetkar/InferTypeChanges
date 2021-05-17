@@ -82,8 +82,6 @@ public class CombyUtils {
     public static boolean isPerfectMatch(String source, Match cm) {
         return cm.getMatched().equals(source.replace("\\\"", "\""));
     }
-    //./RefactoringMiner -c /Users/ameya/Research/TypeChangeStudy/Corpus/Project_neo4j/neo4j 77a5e62f9d5a56a48f82b6bdd8519b18275bef1d -json /Users/ameya/Research/TypeChangeStudy/VanillaRMiner/output.json
-
 
     public static Tuple2<String, Map<String, String>>  renameTemplateVariable(String template, Function<String, String> rename){
         List<Tuple2<String, Environment>> allMatches = matchTemplateVariables(template)
@@ -93,6 +91,7 @@ public class CombyUtils {
         int n = allMatches.size();
         Map<String, String> renames = new HashMap<>();
         for(int i = 0; i < n; i++){
+
             Tuple2<String, Environment> t = allMatches.get(i);
             Environment env = t._2();
 
