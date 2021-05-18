@@ -10,7 +10,7 @@ import Utilities.comby.CombyRewrite;
 import java.util.*;
 import java.util.stream.Stream;
 
-public class Update implements IUpdate {
+public class Update {
 
     private final Tree before;
     private final Tree after;

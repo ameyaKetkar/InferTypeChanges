@@ -26,7 +26,7 @@ import static Utilities.RMinerUtils.*;
 
 import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
-import static type.change.treeCompare.GetIUpdate.getResolvedTypeChangeTemplate;
+import static Utilities.ResolveTypeUtil.getResolvedTypeChangeTemplate;
 
 
 public class Infer {
@@ -137,7 +137,7 @@ public class Infer {
             return explainableUpdates;
         }
 
-        GetIUpdate gu = new GetIUpdate(codeMapping, typeChange);
+        GetUpdate gu = new GetUpdate(codeMapping, typeChange);
         Optional<Update> upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
         if (upd.isEmpty()) {
             LOGGER.info("NO UPDATE FOUND!!!");
