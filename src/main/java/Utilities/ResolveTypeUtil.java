@@ -3,6 +3,7 @@ package Utilities;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import org.refactoringminer.RMinerUtils;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.PerfectMatch;
 
@@ -18,11 +19,12 @@ import static Utilities.CombyUtils.getPerfectMatch;
 import static Utilities.CombyUtils.performIdentifierRename;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
+import static org.refactoringminer.RMinerUtils.*;
 
 public class ResolveTypeUtil {
 
 
-    public static Optional<Tuple2<String, String>> getResolvedTypeChangeTemplate(Tuple2<String, String> reportedTypeChange, List<RMinerUtils.TypeChange> typeChanges) {
+    public static Optional<Tuple2<String, String>> getResolvedTypeChangeTemplate(Tuple2<String, String> reportedTypeChange, List<TypeChange> typeChanges) {
 
         Function<String, Optional<PerfectMatch>> matchType = t -> SYNTACTIC_TYPE_CHANGES.entrySet().stream()
                 .flatMap(x -> getPerfectMatch(x.getValue(), t, ".xml")
@@ -48,7 +50,7 @@ public class ResolveTypeUtil {
         return Optional.ofNullable(enrichedMatchReplace);
     }
 
-    private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<RMinerUtils.TypeChange> typeChanges) {
+    private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {
         Tuple2<String, String> matchReplace = expl.getMatchReplace();
         Map<String, String> tvMapB4 = expl.getMatch().getTemplateVariableMapping()
                 .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))

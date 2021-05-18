@@ -1,11 +1,11 @@
 package Utilities;
 
-import Utilities.RMinerUtils.TypeChange;
 import Utilities.comby.CombyMatch;
 import Utilities.comby.Environment;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import org.refactoringminer.RMinerUtils;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.Update;
 
@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import static Utilities.ASTUtils.*;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
+import static org.refactoringminer.RMinerUtils.*;
 
 public class InferredMappings {
 

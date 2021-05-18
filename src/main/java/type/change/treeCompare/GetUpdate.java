@@ -2,29 +2,23 @@ package type.change.treeCompare;
 
 import Utilities.ASTUtils;
 import Utilities.CombyUtils;
-import Utilities.HttpUtils;
-import Utilities.RMinerUtils.TypeChange;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
-import com.google.gson.Gson;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Expression;
 import Utilities.comby.Environment;
-import Utilities.comby.Match;
+import org.refactoringminer.RMinerUtils;
+import org.refactoringminer.RMinerUtils.TypeChange;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.getChildren;
 import static Utilities.ASTUtils.getCoveringNode;
 
-import static Utilities.CaptureMappingsLike.SYNTACTIC_TYPE_CHANGES;
-import static Utilities.CombyUtils.*;
 import static com.google.common.collect.Streams.zip;
 import static java.util.stream.Collectors.*;
 

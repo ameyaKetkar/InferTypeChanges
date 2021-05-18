@@ -1,7 +1,6 @@
 package type.change;
 
 import Utilities.*;
-import Utilities.RMinerUtils.Response;
 import Utilities.comby.Match;
 import com.google.gson.Gson;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
@@ -9,6 +8,8 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChang
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import logging.MyLogger;
+import org.refactoringminer.RMinerUtils.Response;
+import org.refactoringminer.RMinerUtils.TypeChange;
 import type.change.treeCompare.*;
 import type.change.visitors.NodeCounter;
 
@@ -22,11 +23,11 @@ import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
 import static Utilities.CombyUtils.*;
-import static Utilities.RMinerUtils.*;
 
 import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 import static Utilities.ResolveTypeUtil.getResolvedTypeChangeTemplate;
+import static org.refactoringminer.RMinerUtils.generateUrl;
 
 
 public class Infer {
@@ -104,6 +105,18 @@ public class Infer {
 
     }
 //https://github.com/Graylog2/graylog2-server/commit/dcf7c59ac0853401dd3aa9395653d674c7f14bd6?diff=split#diff-feabaeebdf2909064687134cc0dc3776R146
+
+
+    public static List<CodeMapping> getAsCodeMapping(String url, TypeChange tc, String commit) {
+        return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder().setB4(sm.getBeforeStmt())
+                .setAfter(sm.getAfterStmt()).setIsSame(sm.isSimilar())
+                .addAllReplcementInferred(sm.getReplacements().stream()
+                        .map(x -> ReplacementInferred.newBuilder().setReplacementType(x).build())
+                        .collect(toList()))
+                .setUrlbB4(generateUrl(sm.getLocationInfoBefore(), url,commit, "L"))
+                .setUrlAftr(generateUrl(sm.getLocationInfoAfter(), url,commit, "R")).build())
+                .collect(toList());
+    }
 
     private static List<Update> inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames) {
 

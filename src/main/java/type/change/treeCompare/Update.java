@@ -2,10 +2,11 @@ package type.change.treeCompare;
 
 import Utilities.CombyUtils;
 import Utilities.InferredMappings.Instance;
-import Utilities.RMinerUtils.TypeChange;
 import com.github.gumtreediff.tree.Tree;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import Utilities.comby.CombyRewrite;
+import org.refactoringminer.RMinerUtils;
+import org.refactoringminer.RMinerUtils.TypeChange;
 
 import java.util.*;
 import java.util.stream.Stream;
