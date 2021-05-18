@@ -1,7 +1,6 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
-import Utilities.CaptureMappingsLike;
 import Utilities.CombyUtils;
 import Utilities.HttpUtils;
 import Utilities.RMinerUtils.TypeChange;
@@ -12,21 +11,13 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChang
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
-import io.vavr.control.Try;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Expression;
-import Utilities.comby.CombyMatch;
 import Utilities.comby.Environment;
 import Utilities.comby.Match;
 
-import javax.swing.*;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.IntFunction;
-import java.util.function.Predicate;
-import java.util.function.ToIntFunction;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.getChildren;
@@ -40,8 +31,8 @@ import static java.util.stream.Collectors.*;
 public class GetIUpdate {
 
 
-    private Map<Tuple2<Integer, Integer>, Optional<Tuple3<String, String, Match>>> matchesB4;
-    private Map<Tuple2<Integer, Integer>, Optional<Tuple3<String, String, Match>>> matchesAfter;
+    private Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesB4;
+    private Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesAfter;
     private final CodeMapping codeMapping;
     private final TypeChange typeChange;
 
@@ -55,9 +46,9 @@ public class GetIUpdate {
 
     public static Optional<Tuple2<String, String>> getResolvedTypeChangeTemplate(Tuple2<String, String> reportedTypeChange, List<TypeChange> typeChanges) {
 
-        Function<String, Optional<Tuple3<String, String, Match>>> matchType = t -> SYNTACTIC_TYPE_CHANGES.entrySet().stream()
+        Function<String, Optional<PerfectMatch>> matchType = t -> SYNTACTIC_TYPE_CHANGES.entrySet().stream()
                         .flatMap(x -> getPerfectMatch(x.getValue(), t, ".xml")
-                                .map(y -> Tuple.of(x.getKey(), x.getValue()._1(), y.getMatches().get(0)))
+                                .map(y -> new PerfectMatch(x.getKey(), x.getValue()._1(), y.getMatches().get(0)))
                                 .stream())
                         .findFirst();
 
@@ -66,7 +57,7 @@ public class GetIUpdate {
         if(matchedTypeSyntax._1().isEmpty() || matchedTypeSyntax._2().isEmpty())
             return Optional.empty();
 
-        Explanation expl = new Explanation(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get());
+        MatchReplace expl = new MatchReplace(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get());
         Tuple2<String, String> enrichedMatchReplace = tryToresolveTypes(expl, typeChanges);
 
         if(enrichedMatchReplace._1().contains(":[") && !enrichedMatchReplace._2().contains(":[") )
@@ -79,16 +70,16 @@ public class GetIUpdate {
         return Optional.ofNullable(enrichedMatchReplace);
     }
 
-    private static Tuple2<String, String> tryToresolveTypes(Explanation expl, List<TypeChange> typeChanges) {
+    private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {
         Tuple2<String, String> matchReplace = expl.getMatchReplace();
-        Map<String, String> tvMapB4 = expl.getTvMapB4()
-                .entrySet().stream().filter(x -> !expl.getMatchedTemplateVariables().containsKey(x.getKey()))
+        Map<String, String> tvMapB4 = expl.getMatch().getTemplateVariableMapping()
+                .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
                 .filter(x -> matchReplace._1().contains(x.getValue()))
                 .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]",s->true), x.getValue(), null).isPresent())
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        Map<String, String> tvMapAfter = expl.getTvMapAfter()
-                .entrySet().stream().filter(x -> !expl.getMatchedTemplateVariables().containsValue(x.getKey()))
+        Map<String, String> tvMapAfter = expl.getReplace().getTemplateVariableMapping()
+                .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsValue(x.getKey()))
                 .filter(x -> matchReplace._2().contains(x.getValue()))
                 .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]",s->true), x.getValue(), null).isPresent())
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -96,8 +87,6 @@ public class GetIUpdate {
         Map<Boolean, List<String>> relevantImportsB4 = typeChanges.stream()
                 .flatMap(x -> Stream.concat(x.getRemovedImportStatements().stream(), x.getUnchangedImportStatements().stream()))
                 .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
-
-
 
         Map<String, String> c1 = tvMapB4.entrySet().stream()
                 .map(x -> Tuple.of(x.getValue(), resolveType(x, relevantImportsB4)))
@@ -155,39 +144,42 @@ public class GetIUpdate {
                         .map(y -> b.getValue()).stream()).findFirst();
     }
 
-    public IUpdate getUpdate(ASTNode before, ASTNode after, Tree root1, Tree root2) {
+    public Optional<Update> getUpdate(ASTNode before, ASTNode after, Tree root1, Tree root2) {
 
-        if (root1 == null || root2 == null) return new NoUpdate();
+        if (root1 == null || root2 == null) return Optional.empty();
 
         if (!root1.hasSameType(root2))
             System.out.println();
 
-        AbstractExplanation explanation = before instanceof Expression && after instanceof Expression ?
+        Optional<MatchReplace> explanation = before instanceof Expression && after instanceof Expression ?
                 getInstance(before.toString(), after.toString(), Tuple.of(root1.getPos(), root1.getEndPos())
                             , Tuple.of(root2.getPos(), root2.getEndPos()))
-                : new NoExplanation();
+                : Optional.empty();
 
         Update upd = new Update(root1, root2, before.toString(), after.toString(),explanation, codeMapping, typeChange);
 
         if (root1.hasSameType(root2))
             zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
                 if (t._1().isIsomorphicTo(t._2()))
-                    upd.addSubExplanation(new NoUpdate());
+                    upd.addSubExplanation(Optional.empty());
                 else
                     getCoveringNode(before, t._1()).flatMap(x -> getCoveringNode(after, t._2()).map(y -> Tuple.of(x, y)))
                             .ifPresent(x -> upd.addSubExplanation(getUpdate(x._1(), x._2(), t._1(), t._2())));
             });
         else{
-            if(upd.getExplanation() instanceof Explanation){
-                Explanation expl = (Explanation) upd.getExplanation();
-                List<Tuple2<String, String>> unMappedTVB4 = expl.getUnMappedTVB4();
-                List<Tuple2<String, String>> unMappedTVAfter = expl.getUnmappedTVAfter();
+            if(upd.getExplanation().isPresent()){
+                MatchReplace expl = upd.getExplanation().get();
+                Map<String, String> unMappedTVB4 = expl.getUnMatchedTemplateVarsBefore();
+                Map<String, String> unMappedTVAfter = expl.getUnMatchedTemplateVarsAfter();
                 if(unMappedTVB4.size()==unMappedTVAfter.size() && unMappedTVB4.size() == 1){
-                    Optional<ASTNode> n1 = getCoveringNode(before, expl.getTvMapB4Range().get(unMappedTVB4.get(0)._1()));
-                    Optional<ASTNode> n2 = getCoveringNode(after, expl.getTvMapAfterRange().get(unMappedTVAfter.get(0)._1()));
+
+                    Optional<ASTNode> n1 = getCoveringNode(before, expl.getMatch().getTemplateVariableMappingRange()
+                            .get(unMappedTVB4.entrySet().iterator().next().getKey()));
+                    Optional<ASTNode> n2 = getCoveringNode(after, expl.getReplace().getTemplateVariableMappingRange()
+                            .get(unMappedTVAfter.entrySet().iterator().next().getKey()));
                     if(n1.isPresent() && n2.isPresent()){
                         if(!n1.get().toString().equals(before.toString()) && !n2.get().toString().equals(after.toString()))
-                            upd.setSubUpdates(List.of(getUpdate(n1.get(), n2.get())));
+                            upd.setSubUpdates(getUpdate(n1.get(), n2.get()).stream().collect(toList()));
                     }
                     else{
                         System.out.println("Could not find expr");
@@ -203,75 +195,32 @@ public class GetIUpdate {
                 }
             }
         }
-        return upd;
+        return Optional.of(upd);
     }
 
-    public IUpdate getUpdate(ASTNode before, ASTNode after) {
+    public Optional<Update> getUpdate(ASTNode before, ASTNode after) {
         Tree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
         Tree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
         return getUpdate(before, after, root1, root2);
     }
 
-    public AbstractExplanation getInstance(String before, String after, Tuple2<Integer, Integer> loc_b4,
+    public Optional<MatchReplace> getInstance(String before, String after, Tuple2<Integer, Integer> loc_b4,
                                            Tuple2<Integer, Integer> loc_aftr) {
 
-        Optional<Tuple3<String, String, Match>> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
-                : getMatch(before);
+        Optional<PerfectMatch> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
+                : PerfectMatch.getMatch(before);
         matchesB4.put(loc_b4, explanationBefore);
-        if (explanationBefore.isEmpty()) return new NoExplanation();
+        if (explanationBefore.isEmpty()) return Optional.empty();
 
-        Optional<Tuple3<String, String, Match>> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
-                : getMatch(after);
+        Optional<PerfectMatch> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
+                : PerfectMatch.getMatch(after);
         matchesAfter.put(loc_aftr, explanationAfter);
 
-        if (explanationAfter.isEmpty() || (explanationBefore.get()._1().equals(explanationAfter.get()._1())
-                && Stream.of("Identifier", "ClassName","StringLiteral").anyMatch(x -> explanationAfter.get()._1().equals(x))))
-            return new NoExplanation();
+        if (explanationAfter.isEmpty() || (explanationBefore.get().getName().equals(explanationAfter.get().getName())
+                && Stream.of("Identifier", "ClassName","StringLiteral").anyMatch(x -> explanationAfter.get().getName().equals(x))))
+            return Optional.empty();
 
-        return new Explanation(explanationBefore.get(), explanationAfter.get());
-    }
-
-
-
-    static Optional<Tuple3<String, String, Match>> getMatch(Tuple2<String, String> name_template, Match cm, String source,
-                                                            List<String> recurssiveTVs) {
-
-        Optional<Tuple3<String, String, Match>> result = Optional.empty();
-
-        if(isPerfectMatch(source, cm) && recurssiveTVs.isEmpty())
-            return Optional.of(name_template.concat(Tuple.of(cm)));
-
-        for (int i = 0, recurssiveTVsSize = recurssiveTVs.size(); i < recurssiveTVsSize; i++) {
-            String tv = recurssiveTVs.get(i);
-            Environment env = cm.getEnvironment().stream().filter(x -> x.getVariable().equals(tv)).findFirst().orElse(null);
-            if(env == null)
-                System.out.println();
-            for (var var_values : CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet()) {
-                Predicate<String> heuristic = var_values.getValue()._2();
-                boolean tv_Val_matches = heuristic.test(env.getValue());
-                boolean anyRemaining = !source.replace("\\\"", "\"").equals(cm.getMatched());
-                boolean remainingMatches = anyRemaining && heuristic.test(source.replace("\\\"", "\"").replace(cm.getMatched(), ""));
-                if (!tv_Val_matches && !remainingMatches) continue;
-                Tuple2<String, Map<String, String>> newTemplate_renames = renameTemplateVariable(var_values.getValue()._1(), x -> tv + "x" + x);
-                String tryTemplate = substitute(name_template._2(), tv, newTemplate_renames._1());
-                Optional<CombyMatch> match = CombyUtils.getMatch(tryTemplate, source, null);
-                if (match.isPresent()) {
-                    for (var m : match.get().getMatches()) {
-                        if (m.getMatched().equals(cm.getMatched()) || m.getMatched().contains(cm.getMatched())) {
-                            List<String> recurssiveTVs_Temp = Stream.concat(recurssiveTVs.subList(i + 1, recurssiveTVsSize).stream(),
-                                    Stream.ofNullable(newTemplate_renames._2().getOrDefault("r", null)))
-                                    .collect(Collectors.toList());
-                            result = getMatch(name_template.map(x -> String.format("%s--%s", var_values.getKey(), x), x -> tryTemplate), m,
-                                    source, recurssiveTVs_Temp);
-                            if (result.isPresent()) break;
-                        }
-                    }
-                    if (result.isPresent()) break;
-                }
-            }
-            if (result.isPresent()) break;
-        }
-        return result;
+        return Optional.of(new MatchReplace(explanationBefore.get(), explanationAfter.get()));
     }
 
 
@@ -279,59 +228,7 @@ public class GetIUpdate {
     /*
     pattern: 1= pattern name, 2= pattern with holes
      */
-    static Optional<Tuple3<String, String, Match>> getMatch(String source) {
-        LinkedHashMap<String, Tuple2<String, Predicate<String>>> patternsHeuristics = CaptureMappingsLike.PATTERNS_HEURISTICS;
 
-        ToIntFunction<Tuple2<Tuple2<String, String>, CombyMatch>> indexOf = x -> {
-            int cntr = 0;
-            for(var y: patternsHeuristics.entrySet()){
-                if(y.getKey().equals(x._1()._1()))
-                    return cntr;
-                cntr++;
-            }
-            return cntr;
-        };
-
-        CompletableFuture<Optional<Tuple2<Tuple2<String, String>, CombyMatch>>>[] futures = patternsHeuristics.entrySet().stream()
-                .filter(x->!x.getKey().equals("Anything"))
-                .filter(x -> x.getValue()._2().test(source))
-                .map(x -> CompletableFuture.supplyAsync(() -> CombyUtils.getMatch(x.getValue()._1(), source, null)
-                        .map(y -> Tuple.of(Tuple.of(x.getKey(), x.getValue()._1()), y))))
-                .toArray((IntFunction<CompletableFuture<Optional<Tuple2<Tuple2<String, String>, CombyMatch>>>[]>) CompletableFuture[]::new);
-
-        CompletableFuture.allOf(futures);
-
-        List<Tuple2<Tuple2<String, String>, CombyMatch>> basicMatches =Stream.of(futures)
-                .flatMap(x-> Try.of(() -> x.get()).getOrElse(Optional.empty()).stream())
-                .sorted(Comparator.comparingInt((Tuple2<Tuple2<String, String>, CombyMatch> x) -> x._2().getMatches().stream().mapToInt(z->z.getMatched().length())
-                        .max().getAsInt())
-                        .reversed().thenComparingInt(indexOf))
-                .collect(Collectors.toList());
-
-        Optional<Tuple3<String, String, Match>> perfectMatch = basicMatches.stream()
-                .filter(x -> isPerfectMatch(source, x._2()))
-                .map(x -> x._1().concat(Tuple.of(x._2().getMatches().get(0))))
-                .filter(x -> !x._2().contains("[r]"))
-                .findFirst();
-
-        if (perfectMatch.isPresent())
-            return perfectMatch;
-
-        Optional<Tuple3<String, String, Match>> currentMatch;
-
-        for (var basicMatch : basicMatches) {
-            List<Match> matches = basicMatch._2().getMatches().stream()
-                    .sorted(Comparator.comparingInt(x -> x.getMatched().length())).collect(Collectors.toList());
-            Collections.reverse(matches);
-            for(var m: matches) {
-                currentMatch = getMatch(basicMatch._1(), m, source,
-                            basicMatch._1()._2().contains("r") ? List.of("r") : List.of());
-                if (currentMatch.isPresent()) return currentMatch;
-
-            }
-        }
-        return Optional.empty();
-    }
 
     public static List<String> getAllTemplateVariableName(String template){
 

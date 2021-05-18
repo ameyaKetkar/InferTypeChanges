@@ -2,9 +2,12 @@
 package Utilities.comby;
 
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Generated;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+
+import static java.util.stream.Collectors.toMap;
 
 @Generated("jsonschema2pojo")
 public class Match {
@@ -37,6 +40,14 @@ public class Match {
 
     public String getMatched() {
         return matched;
+    }
+
+    public Map<String, String> getTemplateVarSubstitutions() {
+        return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getValue()));
+    }
+
+    public Map<String, Range__1> getTemplateVarSubstitutionsRange() {
+        return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getRange()));
     }
 
     public void setMatched(String matched) {

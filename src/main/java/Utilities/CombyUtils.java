@@ -178,8 +178,8 @@ public class CombyUtils {
 
 
 
-    public static String substitute(String template, String s1, String s2) {
-        return substitute(template, new HashMap<>(){{put(s1, s2);}});
+    public static String substitute(String template, String tv, String val) {
+        return substitute(template, new HashMap<>(){{put(tv, val);}});
     }
 
     public static String substitute(String template, Map<String, String> substitutions) {

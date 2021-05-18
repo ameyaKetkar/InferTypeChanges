@@ -56,12 +56,12 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
 
 excludeTcs = [('java.lang.String', 'java.util.Optional<:[tar]>')]
 
-res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsRemote"
+res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsTest"
 if not os.path.exists(res):
     os.mkdir(res)
 
 
-with open(os.path.join(parent(res), "output.jsonl")) as c:
+with open(os.path.join(parent(res), "test.jsonl")) as c:
     lines = c.readlines()
     mappings = [json.loads(l) for l in lines if l != '\n']
     tcTemplate_mapping = {}

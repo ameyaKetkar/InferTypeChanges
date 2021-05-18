@@ -1,20 +1,18 @@
 package Utilities;
 
 import Utilities.RMinerUtils.TypeChange;
+import Utilities.comby.CombyMatch;
+import Utilities.comby.Environment;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import Utilities.comby.CombyMatch;
-import Utilities.comby.Environment;
-import type.change.treeCompare.AbstractExplanation;
-import type.change.treeCompare.Explanation;
+import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.Update;
 
 import java.util.*;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
-import static Utilities.ASTUtils.extractLineNumber;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 
@@ -25,13 +23,13 @@ public class InferredMappings {
     private final String Match;
     private final String Replace;
     private final Instance Instance;
-    private boolean noTv;
+    private final boolean noTv;
 
     public InferredMappings(Tuple2<String, String> templateBeforeAfter, Update u) {
         BeforeTypeTemplate = templateBeforeAfter._1();
         AfterTypeTemplate = templateBeforeAfter._2();
-        Match = ((Explanation)u.getExplanation()).getMatchReplace()._1();
-        Replace = ((Explanation)u.getExplanation()).getMatchReplace()._2();
+        Match = u.getExplanation().get().getMatchReplace()._1();
+        Replace = u.getExplanation().get().getMatchReplace()._2();
         Instance = u.getAsInstance();
         noTv = !Match.contains(":[");
     }
@@ -111,7 +109,7 @@ public class InferredMappings {
         private final Map<String, String> TemplateVariableToCodeAfter;
         private final boolean isRelevant;
 
-        public Instance(CodeMapping cm, Update upd, TypeChange tc, AbstractExplanation explanation){
+        public Instance(CodeMapping cm, Update upd, TypeChange tc, Optional<MatchReplace> explanation){
             OriginalCompleteBefore = cm.getB4().replace("\n","");
             OriginalCompleteAfter = cm.getAfter().replace("\n","");
             Before = upd.getBeforeStr().replace("\n","");
@@ -121,23 +119,23 @@ public class InferredMappings {
             CompilationUnit = tc.getBeforeCu().right;
             LineNos = Tuple.of(extractLineNumber(cm.getUrlbB4()), extractLineNumber(cm.getUrlAftr()));
             Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
-            TemplateVariableToCodeBefore = upd.getExplanation() instanceof  Explanation
-                    ? ((Explanation)upd.getExplanation()).getTvMapB4() : new HashMap<>();
-            TemplateVariableToCodeAfter = upd.getExplanation() instanceof  Explanation
-                    ? ((Explanation)upd.getExplanation()).getTvMapAfter() : new HashMap<>();
-            isRelevant = upd.getExplanation() instanceof Explanation
+            TemplateVariableToCodeBefore = upd.getExplanation().isPresent()
+                    ? upd.getExplanation().get().getMatch().getTemplateVariableMapping() : new HashMap<>();
+            TemplateVariableToCodeAfter = upd.getExplanation().isPresent()
+                    ? upd.getExplanation().get().getReplace().getTemplateVariableMapping() : new HashMap<>();
+            isRelevant = upd.getExplanation().isPresent()
                     && ((TemplateVariableToCodeBefore.containsValue(Names._1()) && TemplateVariableToCodeAfter.containsValue(Names._1()))
                     // Because the statements are normalized to renames
                     || (varOnLHS(Names._1(), Before, OriginalCompleteBefore) &&
                     (varOnLHS(Names._1(), After, OriginalCompleteAfter) || varOnLHS(Names._2(), After, OriginalCompleteAfter)))
                     || (isReturnExpression(OriginalCompleteBefore, Before) && isReturnExpression(OriginalCompleteAfter, After)));
-            RelevantImports = explanation instanceof Explanation ? relevantImports(tc, (Explanation) explanation) : new ArrayList<>();
+            RelevantImports = explanation.isPresent() ? relevantImports(tc, explanation.get()) : new ArrayList<>();
 
         }
 
-        private List<String> relevantImports(TypeChange tc, Explanation expl) {
-            Map<String, String> classNamesReferredAfter = expl.getTvMapAfter()
-                    .entrySet().stream().filter(x -> !expl.getMatchedTemplateVariables().containsValue(x.getKey()))
+        private List<String> relevantImports(TypeChange tc, MatchReplace expl) {
+            Map<String, String> classNamesReferredAfter = expl.getReplace().getTemplateVariableMapping()
+                    .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
                     .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]",s->true), x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));

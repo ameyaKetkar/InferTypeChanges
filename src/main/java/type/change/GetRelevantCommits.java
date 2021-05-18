@@ -73,53 +73,41 @@ public class GetRelevantCommits {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-
-        //String pathToTypeChangeMiner = "/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/";
-        Path pathToTypeChangeMiner = Path.of(args[0]);
-        String pathToTypeChangeMinerInput = pathToTypeChangeMiner.resolve("Input/ProtosOut").toAbsolutePath().toString();
-        String pathToTypeChangeMinerOutput = pathToTypeChangeMiner.resolve("Output").toAbsolutePath().toString();
-        Input relevantCommits = new Input(getCommitsFor(queryTypeChanges, pathToTypeChangeMinerInput, pathToTypeChangeMinerOutput));
-
-        Files.write(Path.of("Input.json"), new Gson().toJson(relevantCommits, Input.class).getBytes(), StandardOpenOption.CREATE);
-
-    }
-
-    public static Map<Tuple2<String, String>, Set<Tuple3<String, String, String>>> getCommitsFor(Set<Tuple2<String, String>> queryTypeChanges, String pathToTypeChangeMinerInput, String pathToTypeChangeMinerOutput){
-        ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of(pathToTypeChangeMinerInput));
-        ProtoUtil.ReadWriteAt rw_output = new ProtoUtil.ReadWriteAt(Path.of(pathToTypeChangeMinerOutput));
-        ArrayList<ProjectOuterClass.Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
-
-        List<Tuple2<ProjectOuterClass.Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
-                .map(z -> Tuple.of(z, rw_output.<TypeChangeCommitOuterClass.TypeChangeCommit>readAll("TypeChangeCommit_" + z.getName(), "TypeChangeCommit")))
-                .collect(toList());
-
-        Map<Tuple2<String, String>, Set<Tuple3<String, String, String>>> relevantCommits = new HashMap<>();
-
-        for(var p : project_tcc){
-            if(p._2().size() <= 1) continue;
-            for (TypeChangeCommitOuterClass.TypeChangeCommit x : p._2()){
-                for(TypeChangeAnalysisOuterClass.TypeChangeAnalysis anlys: x.getTypeChangesList()){
-                    if(isNoisy(anlys)){
-                        Tuple2<String, String> typeChange = Tuple.of(anlys.getB4(), anlys.getAftr()).map(PrettyPrinter::pretty, PrettyPrinter::pretty);
-                        if(queryTypeChanges.contains(typeChange)) {
-                            if(!relevantCommits.containsKey(typeChange))
-                                relevantCommits.put(typeChange, new HashSet<>());
-                            relevantCommits.get(typeChange).add(Tuple.of(p._1().getName(), p._1().getUrl(), x.getSha()));
-                        }
-                    }
-                }
-            }
-        }
-
-
-        return relevantCommits;
-    }
-
-    public static boolean isNoisy(TypeChangeAnalysisOuterClass.TypeChangeAnalysis anlys) {
-        return !anlys.getB4().getRoot().getIsTypeVariable() && !anlys.getAftr().getRoot().getIsTypeVariable()
-                && !anlys.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !anlys.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal);
-    }
+//    public static Map<Tuple2<String, String>, Set<Tuple3<String, String, String>>> getCommitsFor(Set<Tuple2<String, String>> queryTypeChanges, String pathToTypeChangeMinerInput, String pathToTypeChangeMinerOutput){
+//        ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of(pathToTypeChangeMinerInput));
+//        ProtoUtil.ReadWriteAt rw_output = new ProtoUtil.ReadWriteAt(Path.of(pathToTypeChangeMinerOutput));
+//        ArrayList<ProjectOuterClass.Project> projects = new ArrayList<>(rw_input.readAll("projects", "Project"));
+//
+//        List<Tuple2<ProjectOuterClass.Project, List<TypeChangeCommitOuterClass.TypeChangeCommit>>> project_tcc = projects.stream()
+//                .map(z -> Tuple.of(z, rw_output.<TypeChangeCommitOuterClass.TypeChangeCommit>readAll("TypeChangeCommit_" + z.getName(), "TypeChangeCommit")))
+//                .collect(toList());
+//
+//        Map<Tuple2<String, String>, Set<Tuple3<String, String, String>>> relevantCommits = new HashMap<>();
+//
+//        for(var p : project_tcc){
+//            if(p._2().size() <= 1) continue;
+//            for (TypeChangeCommitOuterClass.TypeChangeCommit x : p._2()){
+//                for(TypeChangeAnalysisOuterClass.TypeChangeAnalysis anlys: x.getTypeChangesList()){
+//                    if(isNoisy(anlys)){
+//                        Tuple2<String, String> typeChange = Tuple.of(anlys.getB4(), anlys.getAftr()).map(PrettyPrinter::pretty, PrettyPrinter::pretty);
+//                        if(queryTypeChanges.contains(typeChange)) {
+//                            if(!relevantCommits.containsKey(typeChange))
+//                                relevantCommits.put(typeChange, new HashSet<>());
+//                            relevantCommits.get(typeChange).add(Tuple.of(p._1().getName(), p._1().getUrl(), x.getSha()));
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//
+//        return relevantCommits;
+//    }
+//
+//    public static boolean isNoisy(TypeChangeAnalysisOuterClass.TypeChangeAnalysis anlys) {
+//        return !anlys.getB4().getRoot().getIsTypeVariable() && !anlys.getAftr().getRoot().getIsTypeVariable()
+//                && !anlys.getNameSpacesB4().equals(NameSpaceOuterClass.NameSpace.Internal) && !anlys.getNameSpaceAfter().equals(NameSpaceOuterClass.NameSpace.Internal);
+//    }
 
 //    public static List<Map.Entry<Tuple2<TypeGraphOuterClass.TypeGraph, TypeGraphOuterClass.TypeGraph>, List<TypeChangeAnalysisOuterClass.TypeChangeAnalysis.TypeChangeInstance>>> getPopularTypeChanges(Map<Tuple2<String, String>, String> fileNameTypechange){
 //        ProtoUtil.ReadWriteAt rw_input = new ProtoUtil.ReadWriteAt(Path.of("/Users/ameya/Research/TypeChangeStudy/TypeChangeMiner/Input/ProtosOut/"));

@@ -10,20 +10,18 @@ import Utilities.comby.CombyRewrite;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
-
 public class Update implements IUpdate {
 
     private final Tree before;
     private final Tree after;
     private final String beforeStr;
     private final String afterStr;
-    private AbstractExplanation explanation;
+    private Optional<MatchReplace> explanation;
     private List<Update> subUpdates;
     private final Instance project_commit_cu_los;
 //    private boolean isRelevant;
 
-    public Update(Tree before, Tree after, String beforeStr, String afterStr,AbstractExplanation explanation, CodeMapping codeMapping, TypeChange typeChange) {
+    public Update(Tree before, Tree after, String beforeStr, String afterStr, Optional<MatchReplace> explanation, CodeMapping codeMapping, TypeChange typeChange) {
         this.before = before;
         this.after = after;
         this.beforeStr = beforeStr;
@@ -39,14 +37,13 @@ public class Update implements IUpdate {
 
 
     public Optional<String> applyUpdate(String source){
-        if(explanation instanceof NoExplanation) return Optional.empty();
-        Explanation expl = (Explanation) this.explanation;
-        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(expl.getMatchReplace()._1(), expl.getMatchReplace()._2(), source);
+        if(explanation.isEmpty()) return Optional.empty();
+        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(explanation.get().getMatchReplace()._1(), explanation.get().getMatchReplace()._2(), source);
         return rewrite.map(CombyRewrite::getRewrittenSource);
     }
 
     public Optional<String> applyCutPaste(String source){
-        if(explanation instanceof NoExplanation) return Optional.empty();
+        if(explanation.isEmpty()) return Optional.empty();
         if(source.contains(getBeforeStr())) return Optional.of(source.replace(getBeforeStr(), getAfterStr()));
         return Optional.empty();
     }
@@ -71,18 +68,16 @@ public class Update implements IUpdate {
         return after;
     }
 
-    public AbstractExplanation getExplanation() {
+    public Optional<MatchReplace> getExplanation() {
         return explanation;
     }
 
-    public void addSubExplanation(IUpdate se){
-        if(! (se instanceof NoUpdate))
-            this.subUpdates.add((Update)se);
+    public void addSubExplanation(Optional<Update> se){
+        se.ifPresent(update -> this.subUpdates.add(update));
     }
 
-    public void setSubUpdates(List<IUpdate> subUpdates) {
-        this.subUpdates = subUpdates.stream().filter(x -> ! (x instanceof NoUpdate))
-                .map(x -> (Update)x).collect(toList());
+    public void setSubUpdates(List<Update> subUpdates) {
+        this.subUpdates = new ArrayList<>(subUpdates);
     }
 
     public List<Update> getSubUpdates() {
@@ -123,8 +118,8 @@ public class Update implements IUpdate {
 //        return this.isRelevant;
 //    }
 
-    public void setExplanation(AbstractExplanation e) {
-        this.explanation = e;
+    public void setExplanation(MatchReplace e) {
+        this.explanation = Optional.ofNullable(e);
 //        this.isRelevant = explanation instanceof Explanation && isRelevant((Explanation) explanation, getAsInstance());
     }
 }
