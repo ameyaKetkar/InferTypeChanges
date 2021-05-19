@@ -40,6 +40,8 @@ public class CaptureMappingsLike {
             put("Assignment",Tuple.of(":[nm:e]:[28~\\s*]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
             put("ReturnStmt",Tuple.of("return :[e]", s -> s.contains("return ")));
 
+            put("Arguments",Tuple.of(":[a],:[b]", s -> s.contains(",")));
+
             Predicate<String> methodInvocation = s -> s.contains(".") && s.contains("(") && s.contains(")");
             Predicate<String> newInstanceCreation = s -> s.startsWith("new");
             Function<Integer, Predicate<String>> commaCount = i -> s -> s.chars().filter(x->x ==',').count() >=i;

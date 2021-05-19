@@ -1,15 +1,15 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
+import Utilities.comby.Range__1;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Either;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.Map.*;
+import static java.util.Map.Entry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -20,32 +20,75 @@ public class MatchReplace {
     private final Map<String, String> TemplateVariableDeclarations;
 
 
+    private final Map<String, String> UnMatchedBefore;
+    private final Map<String, String> UnMatchedAfter;
+
+    private final Map<String, Range__1> UnMatchedAfterRange;
+    private final Map<String, Range__1> UnMatchedBeforeRange;
+
+    // Renames the after to before in the after template
+    public Tuple2<PerfectMatch, PerfectMatch> safeRename(PerfectMatch before, PerfectMatch after, Map<String, String> afterNameBeforeName){
+        Map<String, String> templateVariableMapping = after.getTemplateVariableMapping();
+        // conflict check
+        List<String> conflictingBeforeNames = afterNameBeforeName.values().stream().filter(x -> templateVariableMapping.keySet().contains(x))
+                .collect(toList());
+
+        afterNameBeforeName = afterNameBeforeName.entrySet().stream()
+                .collect(toMap(x -> x.getKey(), x -> conflictingBeforeNames.contains(x.getValue()) ? x.getValue() + "z": x.getValue()));
+
+        Map<String, String> beforeNameNewBeforeName = conflictingBeforeNames.stream().collect(toMap(x -> x, x -> x + "z"));
+
+        after = after.rename(afterNameBeforeName);
+
+        if(!beforeNameNewBeforeName.isEmpty())
+            before = before.rename(beforeNameNewBeforeName);
+
+        return Tuple.of(before, after);
+    }
+
     public MatchReplace(PerfectMatch before, PerfectMatch after){
         Map<String, String> intersectingTemplateVars = getIntersection(before, after);
-        after = after.rename(intersectingTemplateVars);
+        Tuple2<PerfectMatch, PerfectMatch> sf = safeRename(before, after, intersectingTemplateVars);
+        before = sf._1; after = sf._2();
+        intersectingTemplateVars = getIntersection(before, after);
+    //        after = after.rename(intersectingTemplateVars);
         Optional<Either<String, String>> nxtDcmp = nextDecomposition(before, after,intersectingTemplateVars);
-        while (nxtDcmp.isPresent()){
+        int i = 6;
+        while (nxtDcmp.isPresent() && i >= 0){
             if(nxtDcmp.get().isLeft())
-                before = before.decompose(nxtDcmp.get().getLeft());
+                before = before.decompose(nxtDcmp.get().getLeft()).orElse(before);
             else
-                after = after.decompose(nxtDcmp.get().get());
+                after = after.decompose(nxtDcmp.get().get()).orElse(after);
             intersectingTemplateVars = getIntersection(before, after);
-            after = after.rename(intersectingTemplateVars);
+            sf = safeRename(before, after, intersectingTemplateVars);
+    //        after = after.rename(intersectingTemplateVars);
+            before = sf._1; after = sf._2();
+
             nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars);
+            i -= 1;
 
         }
         Collection<String> finalIntersectingTemplateVars = intersectingTemplateVars.values();
+        PerfectMatch finalAfter = after;
+        PerfectMatch finalBefore = before;
         this.TemplateVariableDeclarations = before.getTemplateVariableMapping().entrySet()
                     .stream().filter(x -> !x.getKey().endsWith("c") && finalIntersectingTemplateVars.contains(x.getKey()))
-                    .collect(toMap(x -> x.getKey(), x -> x.getValue()));
-//                intersectingTemplateVars.entrySet().stream()
-//                                    .collect(toMap(x -> x.getValue(), x -> ));
-        Map<String, String> unMatchedBefore = notInTemplateVariableDeclarations(before.getTemplateVariableMapping());
-        this.Match = before.substitute(unMatchedBefore);
-        Map<String, String> unMatchedAfter = notInTemplateVariableDeclarations(after.getTemplateVariableMapping());
-        this.Replace = after.substitute(unMatchedAfter);
-        System.out.println(this.getMatch().getTemplate() + " -> " + getReplace().getTemplate());
+                    .collect(toMap(Entry::getKey, Entry::getValue));
+        UnMatchedBefore = notInTemplateVariableDeclarations(before.getTemplateVariableMapping());
+        UnMatchedBeforeRange = UnMatchedBefore.keySet().stream()
+                .collect(toMap(x -> x, x -> finalBefore.getTemplateVariableMappingRange().get(x)));
+        this.Match = before.substitute(UnMatchedBefore);
+        UnMatchedAfter = notInTemplateVariableDeclarations(after.getTemplateVariableMapping());
+        UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
+                .collect(toMap(x -> x, x -> finalAfter.getTemplateVariableMappingRange().get(x)));
+        this.Replace = after.substitute(UnMatchedAfter);
+
+
+
+//        System.out.println(this.getMatch().getTemplate() + " -> " + getReplace().getTemplate());
     }
+
+
 
 
 
@@ -88,7 +131,8 @@ public class MatchReplace {
             String matchedTemplateVar = "";
             for(var entry_after: after.getTemplateVariableMapping().entrySet()){
                 if(entry_after.getKey().equals("c")) continue;
-                if(entry_b4.getValue().equals(entry_after.getValue())){
+                if(entry_b4.getValue().replace("\\n","")
+                        .equals(entry_after.getValue().replace("\\n",""))){
                     if(matchedTemplateVar.isEmpty())
                         matchedTemplateVar = entry_after.getKey();
                     if(entry_b4.getKey().equals(entry_after.getKey())){
@@ -119,7 +163,8 @@ public class MatchReplace {
 
 
     public Map<String, String> notInTemplateVariableDeclarations(Map<String, String> tmap){
-    return  tmap.entrySet().stream().filter(x -> !TemplateVariableDeclarations.containsKey(x.getKey()))
+    return  tmap.entrySet().stream().filter(x -> !TemplateVariableDeclarations.containsKey(x.getKey())
+                        && !TemplateVariableDeclarations.containsValue(x.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
 
     }
@@ -128,12 +173,12 @@ public class MatchReplace {
         return Tuple.of(getMatch().getTemplate(), getReplace().getTemplate());
     }
 
-    public Map<String, String> getUnMatchedTemplateVarsBefore(){
-        return notInTemplateVariableDeclarations(Match.getTemplateVariableMapping());
-    }
-    public Map<String, String> getUnMatchedTemplateVarsAfter(){
-        return notInTemplateVariableDeclarations(Replace.getTemplateVariableMapping());
-    }
+//    public Map<String, String> getUnMatchedTemplateVarsBefore(){
+//        return notInTemplateVariableDeclarations(Match.getTemplateVariableMapping());
+//    }
+//    public Map<String, String> getUnMatchedTemplateVarsAfter(){
+//        return notInTemplateVariableDeclarations(Replace.getTemplateVariableMapping());
+//    }
 
     public String getCodeSnippetB4() {
         return getMatch().getCodeSnippet();
@@ -141,5 +186,24 @@ public class MatchReplace {
 
     public String getCodeSnippetAfter() {
         return getReplace().getCodeSnippet();
+    }
+
+
+    public Map<String, String> getUnMatchedBefore() {
+        return UnMatchedBefore;
+    }
+
+    public Map<String, String> getUnMatchedAfter() {
+        return UnMatchedAfter;
+    }
+
+
+    public Map<String, Range__1> getUnMatchedAfterRange() {
+        return UnMatchedAfterRange;
+    }
+
+
+    public Map<String, Range__1> getUnMatchedBeforeRange() {
+        return UnMatchedBeforeRange;
     }
 }

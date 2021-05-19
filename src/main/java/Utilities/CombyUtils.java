@@ -75,7 +75,9 @@ public class CombyUtils {
 
     public static boolean isPerfectMatch(String source, CombyMatch cm) {
         return cm.getMatches().size() == 1
-                && cm.getMatches().get(0).getMatched().equals(source.replace("\\\"", "\""));
+                && cm.getMatches().get(0).getMatched().replace("\\n","")
+                .equals(source.replace("\\\"", "\"").replace("\\n",""));
+
     }
 
 

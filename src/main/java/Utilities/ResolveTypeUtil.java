@@ -46,20 +46,21 @@ public class ResolveTypeUtil {
         if (!enrichedMatchReplace._1().contains(":[") && enrichedMatchReplace._2().contains(":["))
             System.out.println();
 
-        System.out.println(reportedTypeChange + " -> " + enrichedMatchReplace);
+//        System.out.println(reportedTypeChange + " -> " + enrichedMatchReplace);
         return Optional.ofNullable(enrichedMatchReplace);
     }
 
     private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {
         Tuple2<String, String> matchReplace = expl.getMatchReplace();
-        Map<String, String> tvMapB4 = expl.getMatch().getTemplateVariableMapping()
-                .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
+        Map<String, String> tvMapB4 = expl.getUnMatchedBefore().entrySet().stream()
+//                .filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
                 .filter(x -> matchReplace._1().contains(x.getValue()))
                 .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]", s -> true), x.getValue(), null).isPresent())
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        Map<String, String> tvMapAfter = expl.getReplace().getTemplateVariableMapping()
-                .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsValue(x.getKey()))
+
+        Map<String, String> tvMapAfter = expl.getUnMatchedAfter().entrySet().stream()
+//                .filter(x -> !expl.getTemplateVariableDeclarations().containsValue(x.getKey()))
                 .filter(x -> matchReplace._2().contains(x.getValue()))
                 .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]", s -> true), x.getValue(), null).isPresent())
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));

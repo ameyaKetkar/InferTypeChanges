@@ -8,6 +8,7 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChang
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import logging.MyLogger;
+import org.refactoringminer.RMinerUtils;
 import org.refactoringminer.RMinerUtils.Response;
 import org.refactoringminer.RMinerUtils.TypeChange;
 import type.change.treeCompare.*;
@@ -19,6 +20,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
@@ -37,11 +39,18 @@ public class Infer {
 
 
     public static void main(String[] args) throws IOException {
-        ///Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output
         MyLogger.setup();
         Path inputFile = Path.of(args[0]);
         Path outputFile = Path.of(args[1]);
+        Set<String> analyzedCommits = Files.exists(outputFile)?
+                Files.readAllLines(outputFile).stream()
+                .filter(x -> !x.isEmpty())
+                .map(x -> new Gson().fromJson(x, InferredMappings.class))
+                .map(i->i.getInstances().getCommit())
+                .collect(toSet()): new HashSet<>();
+
         CompletableFuture[] futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
+                .filter(x -> !analyzedCommits.contains(x[2]))
                 .flatMap(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile))
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
@@ -49,7 +58,7 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.equals("e9b5effe30cf68820a3dfb00bf736a325313206b"))
+        if(!commit.startsWith("e5d72"))
             return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
@@ -66,6 +75,8 @@ public class Infer {
 
         // All the collected refactorings
         List<TypeChange> allRefactorings = response1.commits.stream().flatMap(x -> x.refactorings.stream())
+//                .filter(x -> x.getReferences()!= null && x.getReferences().stream().anyMatch(y -> y.getBeforeStmt().contains("new File")
+//                                                                                && y.getBeforeStmt().contains("DefaultServer.setRootHandler")))
                 .collect(toList());
 
         // All the reported renames
@@ -93,9 +104,9 @@ public class Infer {
              return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
 
                      // Restrict input to a particular statement mapping
-                     .filter(c -> c.getB4().contains("this.baseDir=baseDir.getAbsoluteFile();"))
+//                     .filter(c -> c.getB4().contains("response.getCode"))
 
-                    .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames))
+                    .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                             .thenApply(ls -> ls.stream().map(a -> new Gson()
                                     .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
                                     .collect(joining("\n")))
@@ -104,8 +115,6 @@ public class Infer {
         });
 
     }
-//https://github.com/Graylog2/graylog2-server/commit/dcf7c59ac0853401dd3aa9395653d674c7f14bd6?diff=split#diff-feabaeebdf2909064687134cc0dc3776R146
-
 
     public static List<CodeMapping> getAsCodeMapping(String url, TypeChange tc, String commit) {
         return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder().setB4(sm.getBeforeStmt())
@@ -118,7 +127,7 @@ public class Infer {
                 .collect(toList());
     }
 
-    private static List<Update> inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames) {
+    private static List<Update> inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit) {
 
         List<Update> explainableUpdates = new ArrayList<>();
         String stmtB4 = codeMapping.getB4();
@@ -149,7 +158,8 @@ public class Infer {
             LOGGER.info("TOO LARGE!!!");
             return explainableUpdates;
         }
-
+        System.out.println("Analyzing : " + commit);
+        System.out.println(String.join("\n->\n", stmtB4, stmtAftr));
         GetUpdate gu = new GetUpdate(codeMapping, typeChange);
         Optional<Update> upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
         if (upd.isEmpty()) {
@@ -228,11 +238,13 @@ public class Infer {
                         if(e.get().getMatchReplace().equals(candidates._1().getExplanation().get().getMatchReplace()))
                             continue;
                     upd.setExplanation(e.get());
+                }else{
+                    removeRedundantUpdates.addAll(candidates._2());
                 }
             }
         }
 
-        return new ArrayList<>(allUpdates);
+        return allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
     }
 
     public static List<Update> removeSubsumedEdits(Collection<Update> allUpdates) {

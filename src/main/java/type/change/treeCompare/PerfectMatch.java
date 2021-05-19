@@ -45,15 +45,23 @@ public class PerfectMatch {
 
     public PerfectMatch rename(Map<String, String> renames){
         String newTemplate = CombyUtils.renameTemplateVariable(Template, renames);
-        return CombyUtils.getPerfectMatch(Tuple.of(newTemplate, s->true), CodeSnippet, null)
-                .map(x -> new PerfectMatch(Name, newTemplate, x)).get();
+        Optional<PerfectMatch> perfectMatch = getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, null)
+                .or(() -> getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, ".xml"))
+                .map(x -> new PerfectMatch(Name, newTemplate, x));
+        if(perfectMatch.isEmpty())
+            System.out.println();
+        return perfectMatch.get();
     }
 
 
     public PerfectMatch substitute(Map<String, String> substitutions){
         String newTemplate = CombyUtils.substitute(Template, substitutions);
-        return CombyUtils.getPerfectMatch(Tuple.of(newTemplate, s->true), CodeSnippet, null)
-                .map(x -> new PerfectMatch(Name, newTemplate, x)).get();
+        Optional<PerfectMatch> perfectMatch = getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, null)
+                .or(() -> getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, ".xml"))
+                .map(x -> new PerfectMatch(Name, newTemplate, x));
+        if(perfectMatch.isEmpty())
+            System.out.println();
+        return perfectMatch.get();
 
     }
 
@@ -82,15 +90,16 @@ public class PerfectMatch {
         return CodeSnippet;
     }
 
-    public PerfectMatch decompose(String templateVariable){
+    public Optional<PerfectMatch> decompose(String templateVariable){
         String decomposeSnippet = Match.getTemplateVarSubstitutions().get(templateVariable);
         Optional<PerfectMatch> decomposedTemplate = getMatch(decomposeSnippet);
+        if(decomposedTemplate.isEmpty())
+            System.out.println();
 
         Tuple2<String, Map<String, String>> newTemplate_renames = renameTemplateVariable(decomposedTemplate.get().Template, x -> templateVariable + "x" + x);
         String tryTemplate = CombyUtils.substitute(Template, templateVariable, newTemplate_renames._1());
         return getPerfectMatch(Tuple.of(tryTemplate, s->true),CodeSnippet,null)
-                .map(x->new PerfectMatch(Name + "-" + decomposedTemplate.get().getName(), tryTemplate, x))
-                .get();
+                .map(x->new PerfectMatch(Name + "-" + decomposedTemplate.get().getName(), tryTemplate, x));
 
 
 

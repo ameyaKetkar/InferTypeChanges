@@ -27,7 +27,8 @@ public class Environment {
     }
 
     public String getValue() {
-        return value;
+        return value.replace("\\\"", "\"")
+                .replace("\\n","");
     }
 
     public void setValue(String value) {

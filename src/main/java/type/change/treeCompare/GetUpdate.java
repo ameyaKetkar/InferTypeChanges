@@ -64,13 +64,13 @@ public class GetUpdate {
         else{
             if(upd.getExplanation().isPresent()){
                 MatchReplace expl = upd.getExplanation().get();
-                Map<String, String> unMappedTVB4 = expl.getUnMatchedTemplateVarsBefore();
-                Map<String, String> unMappedTVAfter = expl.getUnMatchedTemplateVarsAfter();
+                Map<String, String> unMappedTVB4 = expl.getUnMatchedBefore().entrySet().stream().filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), x-> x.getValue()));
+                Map<String, String> unMappedTVAfter = expl.getUnMatchedAfter().entrySet().stream().filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), x-> x.getValue()));
                 if(unMappedTVB4.size()==unMappedTVAfter.size() && unMappedTVB4.size() == 1){
 
-                    Optional<ASTNode> n1 = getCoveringNode(before, expl.getMatch().getTemplateVariableMappingRange()
+                    Optional<ASTNode> n1 = getCoveringNode(before, expl.getUnMatchedBeforeRange()
                             .get(unMappedTVB4.entrySet().iterator().next().getKey()));
-                    Optional<ASTNode> n2 = getCoveringNode(after, expl.getReplace().getTemplateVariableMappingRange()
+                    Optional<ASTNode> n2 = getCoveringNode(after, expl.getUnMatchedAfterRange()
                             .get(unMappedTVAfter.entrySet().iterator().next().getKey()));
                     if(n1.isPresent() && n2.isPresent()){
                         if(!n1.get().toString().equals(before.toString()) && !n2.get().toString().equals(after.toString()))
@@ -114,6 +114,8 @@ public class GetUpdate {
         if (explanationAfter.isEmpty() || (explanationBefore.get().getName().equals(explanationAfter.get().getName())
                 && Stream.of("Identifier", "ClassName","StringLiteral").anyMatch(x -> explanationAfter.get().getName().equals(x))))
             return Optional.empty();
+
+
 
         return Optional.of(new MatchReplace(explanationBefore.get(), explanationAfter.get()));
     }
