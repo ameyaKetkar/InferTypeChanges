@@ -52,7 +52,7 @@ public class MatchReplace {
         before = sf._1; after = sf._2();
         intersectingTemplateVars = getIntersection(before, after);
     //        after = after.rename(intersectingTemplateVars);
-        Optional<Either<String, String>> nxtDcmp = nextDecomposition(before, after,intersectingTemplateVars);
+        Optional<Either<String, String>> nxtDcmp = nextDecomposition(before, after,intersectingTemplateVars, null);
         int i = 6;
         while (nxtDcmp.isPresent() && i >= 0){
             if(nxtDcmp.get().isLeft())
@@ -64,7 +64,7 @@ public class MatchReplace {
     //        after = after.rename(intersectingTemplateVars);
             before = sf._1; after = sf._2();
 
-            nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars);
+            nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, nxtDcmp.get());
             i -= 1;
 
         }
@@ -92,17 +92,24 @@ public class MatchReplace {
 
 
 
-    public Optional<Either<String, String>> nextDecomposition(PerfectMatch before, PerfectMatch after, Map<String, String> intersectingTemplateVars){
+    public Optional<Either<String, String>> nextDecomposition(PerfectMatch before, PerfectMatch after, Map<String, String> intersectingTemplateVars, Either<String, String> prev){
         for(var eb: before.getTemplateVariableMapping().entrySet()) {
             if (eb.getKey().endsWith("c") || intersectingTemplateVars.containsKey(eb.getKey()) || eb.getValue().isEmpty())
                 continue;
             for (var ea : after.getTemplateVariableMapping().entrySet()) {
                 if (ea.getKey().endsWith("c") || intersectingTemplateVars.containsKey(ea.getKey()) || ea.getValue().isEmpty())
                     continue;
-                if(isContainedTokenize(eb.getValue(),ea.getValue()))
-                    return Optional.of(Either.left(eb.getKey()));
-                if(isContainedTokenize(ea.getValue(),eb.getValue()))
-                    return Optional.of(Either.right(ea.getKey()));
+
+                if(isContainedTokenize(eb.getValue(),ea.getValue())) {
+                    Either<String, String> l = Either.left(eb.getKey());
+                    if(!l.equals(prev))
+                        return Optional.of(l);
+                }
+                if(isContainedTokenize(ea.getValue(),eb.getValue())) {
+                    Either<String, String> r = Either.right(ea.getKey());
+                    if(!r.equals(prev))
+                    return Optional.of(r);
+                }
             }
         }
         return Optional.empty();

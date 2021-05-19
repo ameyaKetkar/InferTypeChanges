@@ -58,7 +58,7 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("e5d72"))
+        if(!commit.startsWith("4428e96024ae631b8c299dc7fcda657b35e7e7a8"))
             return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
@@ -75,8 +75,8 @@ public class Infer {
 
         // All the collected refactorings
         List<TypeChange> allRefactorings = response1.commits.stream().flatMap(x -> x.refactorings.stream())
-//                .filter(x -> x.getReferences()!= null && x.getReferences().stream().anyMatch(y -> y.getBeforeStmt().contains("new File")
-//                                                                                && y.getBeforeStmt().contains("DefaultServer.setRootHandler")))
+                .filter(x -> x.getReferences()!= null && x.getReferences().stream()
+                        .anyMatch(y -> y.getBeforeStmt().contains("new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/otherDir\"))")))
                 .collect(toList());
 
         // All the reported renames
@@ -239,7 +239,7 @@ public class Infer {
                             continue;
                     upd.setExplanation(e.get());
                 }else{
-                    removeRedundantUpdates.addAll(candidates._2());
+//                    removeRedundantUpdates.addAll(candidates._2());
                 }
             }
         }

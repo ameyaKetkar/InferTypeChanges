@@ -94,7 +94,7 @@ public class PerfectMatch {
         String decomposeSnippet = Match.getTemplateVarSubstitutions().get(templateVariable);
         Optional<PerfectMatch> decomposedTemplate = getMatch(decomposeSnippet);
         if(decomposedTemplate.isEmpty())
-            System.out.println();
+            return Optional.empty();
 
         Tuple2<String, Map<String, String>> newTemplate_renames = renameTemplateVariable(decomposedTemplate.get().Template, x -> templateVariable + "x" + x);
         String tryTemplate = CombyUtils.substitute(Template, templateVariable, newTemplate_renames._1());
