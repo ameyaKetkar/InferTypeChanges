@@ -55,8 +55,8 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("6f26cd"))
-            return Stream.empty();
+//        if(!commit.startsWith("6f26cd"))
+//            return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
         // Call Refactoring Miner
@@ -71,9 +71,11 @@ public class Infer {
         Response response1 = new Gson().fromJson(response.get(), Response.class);
 
         // All the collected refactorings
-        List<TypeChange> allRefactorings = response1.commits.stream().flatMap(x -> x.refactorings.stream())
-//                .filter(x -> x.getReferences()!= null && x.getReferences().stream()
-//                        .anyMatch(y -> y.getBeforeStmt().contains("new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/otherDir\"))")))
+        if(response1.commits == null)
+            return Stream.empty();
+        List<TypeChange> allRefactorings = response1.commits.stream()
+                .flatMap(x -> x.refactorings.stream())
+                .filter(Objects::nonNull)
                 .collect(toList());
 
         // All the reported renames

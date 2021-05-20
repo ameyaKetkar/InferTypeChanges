@@ -35,9 +35,9 @@ public class CaptureMappingsLike {
             put("Identifier",Tuple.of(":[[id]]", s -> !s.contains(" ") && !s.contains(",") && !s.contains("(")));
             put("Member-Reference", Tuple.of(":[[ty]]:::[[c]]", s -> s.contains("::")));
             put("Expression",Tuple.of("<:[exp:e]>", s -> s.startsWith("<")));
-            put("Assignment1",Tuple.of(":[ty:e] :[[nm]]:[28~\\s*]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
-            put("Assignment2",Tuple.of(":[mod:e] :[ty:e] :[[nm]]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
-            put("Assignment",Tuple.of(":[nm:e]:[28~\\s*]:[29~[\\+\\-\\*\\&]*]=:[30~\\s*]:[r]", s -> s.contains("=")));
+            put("Assignment1",Tuple.of(":[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]", s -> s.contains("=")));
+            put("Assignment2",Tuple.of(":[mod:e] :[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]", s -> s.contains("=")));
+            put("Assignment",Tuple.of(":[nm:e]:[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]", s -> s.contains("=")));
             put("ReturnStmt",Tuple.of("return :[e]", s -> s.contains("return ")));
 
             put("Arguments",Tuple.of(":[a],:[b]", s -> s.contains(",")));
