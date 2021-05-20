@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
+import static Utilities.ResolveTypeUtil.resolveTypeNames;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 import static org.refactoringminer.RMinerUtils.*;
@@ -135,7 +136,7 @@ public class InferredMappings {
         }
 
         private List<String> relevantImports(TypeChange tc, MatchReplace expl) {
-            Map<String, String> classNamesReferredAfter = expl.getReplace().getTemplateVariableMapping()
+            Map<String, String> classNamesReferredAfter = expl.getUnMatchedAfter()
                     .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
                     .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]",s->true), x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
@@ -147,13 +148,13 @@ public class InferredMappings {
                     tc.getUnchangedImportStatements().stream())
                     .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
 
+            Map<String, String> resolvedTypeNames = resolveTypeNames(classNamesReferredAfter, relevantImportsAfter);
+//            Map<String, String> c2 = classNamesReferredAfter.entrySet().stream()
+//                    .flatMap(x -> relevantImportsAfter.getOrDefault(true, new ArrayList<>()).stream()
+//                            .filter(y -> y.endsWith("." + x.getValue())).findFirst().stream().map(y -> Tuple.of(x.getKey(), y)))
+//                    .collect(toMap(x -> x._1(), x -> x._2()));
 
-            Map<String, String> c2 = classNamesReferredAfter.entrySet().stream()
-                    .flatMap(x -> relevantImportsAfter.getOrDefault(true, new ArrayList<>()).stream()
-                            .filter(y -> y.endsWith("." + x.getValue())).findFirst().stream().map(y -> Tuple.of(x.getKey(), y)))
-                    .collect(toMap(x -> x._1(), x -> x._2()));
-
-            return new ArrayList<>(c2.values());
+            return new ArrayList<>(resolvedTypeNames.values());
 
         }
 

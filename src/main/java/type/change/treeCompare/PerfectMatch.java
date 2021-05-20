@@ -49,7 +49,7 @@ public class PerfectMatch {
     public static Tuple2<PerfectMatch, PerfectMatch> safeRename(PerfectMatch before, PerfectMatch after, Map<String, String> afterNameBeforeName){
         Map<String, String> templateVariableMapping = after.getTemplateVariableMapping();
         // conflict check
-        List<String> conflictingBeforeNames = afterNameBeforeName.values().stream().filter(x -> templateVariableMapping.keySet().contains(x))
+        List<String> conflictingBeforeNames = afterNameBeforeName.values().stream().filter(x -> templateVariableMapping.containsKey(x))
                 .collect(toList());
 
         afterNameBeforeName = afterNameBeforeName.entrySet().stream()
@@ -67,17 +67,11 @@ public class PerfectMatch {
 
     public PerfectMatch rename(Map<String, String> renames){
         String newTemplate = CombyUtils.renameTemplateVariable(Template, renames);
-        Optional<PerfectMatch> perfectMatch = getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, null)
-                .or(() -> getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, ".xml"))
-                .map(x -> new PerfectMatch(Name, newTemplate, x));
-        if(perfectMatch.isEmpty())
-            System.out.println();
-        return perfectMatch.get();
+        return substitute(newTemplate);
     }
 
 
-    public PerfectMatch substitute(Map<String, String> substitutions){
-        String newTemplate = CombyUtils.substitute(Template, substitutions);
+    public PerfectMatch substitute(String newTemplate){
         Optional<PerfectMatch> perfectMatch = getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, null)
                 .or(() -> getPerfectMatch(Tuple.of(newTemplate, s -> true), CodeSnippet, ".xml"))
                 .map(x -> new PerfectMatch(Name, newTemplate, x));
@@ -196,10 +190,10 @@ public class PerfectMatch {
             String tv = recurssiveTVs.get(i);
             Environment env = cm.getEnvironment().stream().filter(x -> x.getVariable().equals(tv)).findFirst().orElse(null);
             if(env == null)
-                System.out.println();
+                continue;
             for (Entry<String, Tuple2<String, Predicate<String>>> var_values : CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet()) {
                 Predicate<String> heuristic = var_values.getValue()._2();
-                boolean tv_Val_matches = heuristic.test(env.getValue());
+                boolean tv_Val_matches = env!= null && heuristic.test(env.getValue());
                 boolean anyRemaining = !source.replace("\\\"", "\"").equals(cm.getMatched());
                 boolean remainingMatches = anyRemaining && heuristic.test(source.replace("\\\"", "\"").replace(cm.getMatched(), ""));
                 if (!tv_Val_matches && !remainingMatches) continue;

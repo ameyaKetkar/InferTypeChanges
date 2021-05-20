@@ -9,7 +9,8 @@ import io.vavr.Tuple2;
 import logging.MyLogger;
 import org.refactoringminer.RMinerUtils.Response;
 import org.refactoringminer.RMinerUtils.TypeChange;
-import type.change.treeCompare.*;
+import type.change.treeCompare.GetUpdate;
+import type.change.treeCompare.Update;
 import type.change.visitors.NodeCounter;
 
 import java.io.IOException;
@@ -20,14 +21,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-import static Utilities.ASTUtils.*;
-
+import static Utilities.ASTUtils.isNotWorthLearning;
+import static Utilities.ResolveTypeUtil.getResolvedTypeChangeTemplate;
 import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
-import static Utilities.ResolveTypeUtil.getResolvedTypeChangeTemplate;
 import static org.refactoringminer.RMinerUtils.generateUrl;
-import static type.change.treeCompare.GetUpdate.removeSubsumedEdits;
-import static type.change.treeCompare.Update.*;
+import static type.change.treeCompare.Update.getAllDescendants;
 
 
 public class Infer {
@@ -56,8 +55,8 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-//        if(!commit.startsWith("3c0dd"))
-//            return Stream.empty();
+        if(!commit.startsWith("6f26cd"))
+            return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
         // Call Refactoring Miner

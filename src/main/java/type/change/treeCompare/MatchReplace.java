@@ -12,7 +12,6 @@ import io.vavr.control.Try;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static Utilities.CombyUtils.*;
 import static java.util.Map.Entry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -57,17 +56,14 @@ public class MatchReplace {
         this.TemplateVariableDeclarations = before.getTemplateVariableMapping().entrySet()
                 .stream().filter(x -> !x.getKey().endsWith("c") && finalIntersectingTemplateVars.contains(x.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
-        UnMatchedBefore = notInTemplateVariableDeclarations(before.getTemplateVariableMapping());
-        UnMatchedBeforeRange = UnMatchedBefore.keySet().stream()
+        this.UnMatchedBefore = notInTemplateVariableDeclarations(before.getTemplateVariableMapping());
+        this.UnMatchedBeforeRange = UnMatchedBefore.keySet().stream()
                 .collect(toMap(x -> x, x -> finalBefore.getTemplateVariableMappingRange().get(x)));
-        this.Match = before.substitute(UnMatchedBefore);
-        UnMatchedAfter = notInTemplateVariableDeclarations(after.getTemplateVariableMapping());
-        UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
+        this.Match = before.substitute(CombyUtils.substitute(before.getTemplate(), UnMatchedBefore));
+        this.UnMatchedAfter = notInTemplateVariableDeclarations(after.getTemplateVariableMapping());
+        this.UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
                 .collect(toMap(x -> x, x -> finalAfter.getTemplateVariableMappingRange().get(x)));
-        this.Replace = after.substitute(UnMatchedAfter);
-
-
-//        System.out.println(this.getMatch().getTemplate() + " -> " + getReplace().getTemplate());
+        this.Replace = after.substitute(CombyUtils.substitute(after.getTemplate(), UnMatchedAfter));
     }
 
 
@@ -218,9 +214,9 @@ public class MatchReplace {
         if(b4.isPresent()){
             Tuple2<String, String> finalB = b4.get();
             Tuple2<String, String> finalAftr = aftr.get();
-            Tuple2<String, Map<String, String>> newTemplate_renamesB4 = renameTemplateVariable(child.getMatchReplace()._1(), x -> finalB._1() + "x" + x)
+            Tuple2<String, Map<String, String>> newTemplate_renamesB4 = CombyUtils.renameTemplateVariable(child.getMatchReplace()._1(), x -> finalB._1() + "x" + x)
                     .map1(x -> parent.getUnMatchedBefore().get(finalB._1()).replace("\\\"", "\"").replace(child.getCodeSnippetB4(), x));
-            Tuple2<String, Map<String, String>> newTemplate_renamesAfter = renameTemplateVariable(child.getMatchReplace()._2(), x -> finalAftr._1() + "x" + x)
+            Tuple2<String, Map<String, String>> newTemplate_renamesAfter = CombyUtils.renameTemplateVariable(child.getMatchReplace()._2(), x -> finalAftr._1() + "x" + x)
                     .map1(x -> parent.getUnMatchedAfter().get(finalAftr._1()).replace("\\\"", "\"").replace(child.getCodeSnippetAfter(), x));
 
             String mergedB4 = parent.getMatchReplace()._1().replace("\\\"", "\"").replace(b4.get()._2(), newTemplate_renamesB4._1());
@@ -231,11 +227,11 @@ public class MatchReplace {
                 return Optional.of(parent);
 
             Optional<Utilities.comby.Match> newExplainationBefore = CombyUtils.getMatch(mergedB4, parent.getCodeSnippetB4(), null)
-                    .filter(x -> isPerfectMatch(parent.getCodeSnippetB4(), x))
+                    .filter(x -> CombyUtils.isPerfectMatch(parent.getCodeSnippetB4(), x))
                     .map(x -> x.getMatches().get(0));
 
             Optional<Match> newExplainationAfter = CombyUtils.getMatch(mergedAfter, parent.getCodeSnippetAfter(), null)
-                    .filter(x -> isPerfectMatch(parent.getCodeSnippetAfter(), x))
+                    .filter(x -> CombyUtils.isPerfectMatch(parent.getCodeSnippetAfter(), x))
                     .map(x -> x.getMatches().get(0));
             if (newExplainationAfter.isPresent() && newExplainationBefore.isPresent()) {
                 PerfectMatch before = new PerfectMatch(parent.getMatch().getName() + "----" + child.getMatch().getName(), mergedB4, newExplainationBefore.get());

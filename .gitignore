@@ -19,3 +19,5 @@ src/main/python/comby/__pycache__/
 __pycache__/
 
 Deploy.py
+
+Input/TypeChangeCommits.json

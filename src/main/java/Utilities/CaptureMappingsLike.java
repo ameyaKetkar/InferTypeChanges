@@ -41,6 +41,7 @@ public class CaptureMappingsLike {
             put("ReturnStmt",Tuple.of("return :[e]", s -> s.contains("return ")));
 
             put("Arguments",Tuple.of(":[a],:[b]", s -> s.contains(",")));
+            put("LambdaExpression",Tuple.of(":[[a]]->:[b]", s -> s.contains(",")));
 
             Predicate<String> methodInvocation = s -> s.contains(".") && s.contains("(") && s.contains(")");
             Predicate<String> newInstanceCreation = s -> s.startsWith("new");
