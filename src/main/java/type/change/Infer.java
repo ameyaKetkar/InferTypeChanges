@@ -56,8 +56,8 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("3c0dd"))
-            return Stream.empty();
+//        if(!commit.startsWith("3c0dd"))
+//            return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
         // Call Refactoring Miner
@@ -170,9 +170,7 @@ public class Infer {
 
         for (var expln : explainableUpdates)
             System.out.println(expln.getExplanation().get().getMatchReplace().toString());
-//            LOGGER.info((((Explanation) expln.getExplanation()).getMatchReplace()).toString());
-
-
+        
         System.out.println("----------");
 
         return explainableUpdates;
