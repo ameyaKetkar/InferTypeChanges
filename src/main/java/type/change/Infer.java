@@ -55,8 +55,8 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-//        if(!commit.startsWith("6f26cd"))
-//            return Stream.empty();
+        if(!commit.startsWith("8f94c"))
+            return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
         // Call Refactoring Miner
@@ -70,13 +70,26 @@ public class Infer {
 
         Response response1 = new Gson().fromJson(response.get(), Response.class);
 
-        // All the collected refactorings
-        if(response1.commits == null)
+        if(response1 == null){
+            System.out.println("REFACTORING MINER RESPONSE IS EMPTY !!!!! ");
             return Stream.empty();
+        }
+
+        // All the collected refactorings
+        if(response1.commits == null) {
+            System.out.println("REFACTORING MINER RESPONSE IS EMPTY !!!!! ");
+            return Stream.empty();
+        }
+
         List<TypeChange> allRefactorings = response1.commits.stream()
                 .flatMap(x -> x.refactorings.stream())
                 .filter(Objects::nonNull)
                 .collect(toList());
+
+        if(allRefactorings.isEmpty()){
+            System.out.println("REFACTORING MINER RESPONSE IS EMPTY !!!!! ");
+            return Stream.empty();
+        }
 
         // All the reported renames
         Set<Tuple2<String, String>> allRenames = allRefactorings.stream().filter(r -> !r.getBeforeName().equals(r.getAfterName()))
