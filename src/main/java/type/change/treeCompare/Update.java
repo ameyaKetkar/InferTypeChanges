@@ -119,8 +119,8 @@ public class Update {
 //        return this.isRelevant;
 //    }
 
-    public void setExplanation(MatchReplace e) {
-        this.explanation = Optional.ofNullable(e);
+    public void setExplanation(Optional<MatchReplace> e) {
+        this.explanation = e;
 //        this.isRelevant = explanation instanceof Explanation && isRelevant((Explanation) explanation, getAsInstance());
     }
 }

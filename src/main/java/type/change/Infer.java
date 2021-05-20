@@ -1,14 +1,12 @@
 package type.change;
 
 import Utilities.*;
-import Utilities.comby.Match;
 import com.google.gson.Gson;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import logging.MyLogger;
-import org.refactoringminer.RMinerUtils;
 import org.refactoringminer.RMinerUtils.Response;
 import org.refactoringminer.RMinerUtils.TypeChange;
 import type.change.treeCompare.*;
@@ -20,16 +18,16 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
-import static Utilities.CombyUtils.*;
 
 import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 import static Utilities.ResolveTypeUtil.getResolvedTypeChangeTemplate;
 import static org.refactoringminer.RMinerUtils.generateUrl;
+import static type.change.treeCompare.GetUpdate.removeSubsumedEdits;
+import static type.change.treeCompare.Update.*;
 
 
 public class Infer {
@@ -58,7 +56,7 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("4428e96024ae631b8c299dc7fcda657b35e7e7a8"))
+        if(!commit.startsWith("3c0dd"))
             return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
@@ -75,8 +73,8 @@ public class Infer {
 
         // All the collected refactorings
         List<TypeChange> allRefactorings = response1.commits.stream().flatMap(x -> x.refactorings.stream())
-                .filter(x -> x.getReferences()!= null && x.getReferences().stream()
-                        .anyMatch(y -> y.getBeforeStmt().contains("new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/otherDir\"))")))
+//                .filter(x -> x.getReferences()!= null && x.getReferences().stream()
+//                        .anyMatch(y -> y.getBeforeStmt().contains("new FileResourceManager(newSymlink,10485760,true,rootPath.getAbsolutePath().concat(\"/otherDir\"))")))
                 .collect(toList());
 
         // All the reported renames
@@ -102,10 +100,6 @@ public class Infer {
             }
 
              return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
-
-                     // Restrict input to a particular statement mapping
-//                     .filter(c -> c.getB4().contains("response.getCode"))
-
                     .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                             .thenApply(ls -> ls.stream().map(a -> new Gson()
                                     .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
@@ -167,7 +161,9 @@ public class Infer {
             return explainableUpdates;
         }
 
-        explainableUpdates = explainableUpdates(upd.get());
+        explainableUpdates = Stream.concat(Stream.of(upd.get()), getAllDescendants(upd.get()))
+                .filter(i -> i.getExplanation().isPresent())
+                .collect(toList());
 
         if (explainableUpdates.isEmpty())
             LOGGER.info("NO EXPLAINABLE UPDATE FOUND!!!");
@@ -183,130 +179,64 @@ public class Infer {
     }
 
 
-    public static List<Update> explainableUpdates(Update u) {
-        // Collect all updates!
-        Collection<Update> allUpdates = Stream.concat(Stream.of(u), Update.getAllDescendants(u))
-                .filter(i -> i.getExplanation().isPresent())
-                .collect(toList());
-
-        allUpdates = allUpdates.stream().collect(groupingBy(x -> Tuple.of(Tuple.of(x.getBefore().getPos(), x.getBefore().getEndPos()), Tuple.of(
-                x.getAfter().getPos(), x.getAfter().getEndPos())), collectingAndThen(toList(), x -> x.stream().findFirst().get())))
-                .values();
-
-        if (allUpdates.size() == 1)
-            return new ArrayList<>(allUpdates);
-
-        // IF Descendants explain the change partially then remove descendants
-        // IF Descendants explain the change incorrectly then remove descendants
-        // IF descendants completely explain the change, then remove the ancestors
-        Map<Update, List<Update>> merges = new HashMap<>();
-        var removeRedundantUpdates = new ArrayList<Update>();
-        for (var i : allUpdates) {
-            List<Update> allDescendants = Update.getAllDescendants(i)
-                    .filter(x -> x.getExplanation().isPresent())
-                    .filter(allUpdates::contains)
-                    .collect(toList());
-
-            List<Update> simplestDescendants = removeSubsumedEdits(allDescendants);
-            boolean applyDesc = Update.applyUpdatesAndMatch(simplestDescendants, i.getBeforeStr(), i.getAfterStr());
-            if (applyDesc) {
-                if(!i.getAsInstance().isRelevant())
-                    removeRedundantUpdates.add(i);
-            }
-            else {
-                merges.put(i, simplestDescendants);
-//                removeRedundantUpdates.addAll(i);
-            }
-        }
-
-        allUpdates = allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
-
-        for (var upd : allUpdates) {
-            if (merges.containsKey(upd)) {
-                Tuple2<Update, List<Update>> candidates = Tuple.of(upd, merges.get(upd));
-                Optional<MatchReplace> e = candidates._1().getExplanation();
-                if(e.isEmpty()) continue;
-                for (var child : candidates._2()) {
-                    if(child.getExplanation().isEmpty()) continue;
-                    e = mergeExplanations(e.get(), child.getExplanation().get());
-                    if (e.isEmpty())
-                        break;
-                    System.out.println();
-                }
-                if (e.isPresent()) {
-                    if(candidates._1().getExplanation().isPresent())
-                        if(e.get().getMatchReplace().equals(candidates._1().getExplanation().get().getMatchReplace()))
-                            continue;
-                    upd.setExplanation(e.get());
-                }else{
-//                    removeRedundantUpdates.addAll(candidates._2());
-                }
-            }
-        }
-
-        return allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
-    }
-
-    public static List<Update> removeSubsumedEdits(Collection<Update> allUpdates) {
-        List<Update> subsumedEdits = new ArrayList<>();
-        for (var i : allUpdates) {
-            for (var j : allUpdates) {
-                if (isSubsumedBy(i.getBefore(), j.getBefore()) || isSubsumedBy(i.getAfter(), j.getAfter())) {
-                    subsumedEdits.add(j);
-                }
-            }
-        }
-        return allUpdates.stream().filter(x -> !subsumedEdits.contains(x)).collect(toList());
-    }
-
-    /**
-     *
-     * @param parent
-     * @param child
-     * @return Returns an explanation where the parent template is merged with the child template
-     * The merge can happen iff one of the template variables in the parent template perfectly match the before
-     * and after of the child explanation
-     */
-    public static Optional<MatchReplace> mergeExplanations(MatchReplace parent, MatchReplace child) {
-        try {
-            Optional<Tuple2<String, String>> b4 = parent.getMatch().getTemplateVariableMapping().entrySet().stream()
-                    .filter(x -> x.getValue().replace("\\\"", "\"").equals(child.getCodeSnippetB4()))
-                    .map(x -> Tuple.of(x.getKey(), x.getValue().replace("\\\"", "\"")))
-                    .findFirst();
-
-            Optional<Tuple2<String, String>> aftr = parent.getReplace().getTemplateVariableMapping().entrySet().stream()
-                    .filter(x -> x.getValue().replace("\\\"", "\"").equals(child.getCodeSnippetAfter()))
-                    .map(x -> Tuple.of(x.getKey(), x.getValue().replace("\\\"", "\"")))
-                    .findFirst();
+//    public static List<Update> explainableUpdates(Update u) {
+//        // Collect all updates!
+//        Collection<Update> allUpdates = Stream.concat(Stream.of(u), getAllDescendants(u))
+//                .filter(i -> i.getExplanation().isPresent())
+//                .collect(toList());
+//
+////        allUpdates = allUpdates.stream().collect(groupingBy(x -> Tuple.of(Tuple.of(x.getBefore().getPos(), x.getBefore().getEndPos()), Tuple.of(
+////                x.getAfter().getPos(), x.getAfter().getEndPos())), collectingAndThen(toList(), x -> x.stream().findFirst().get())))
+////                .values();
+//
+//        if (allUpdates.size() == 1)
+//            return new ArrayList<>(allUpdates);
+//
+//        // IF Descendants explain the change partially then remove descendants
+//        // IF Descendants explain the change incorrectly then remove descendants
+//        // IF descendants completely explain the change, then remove the ancestors
+//        Map<Update, List<Update>> merges = new HashMap<>();
+//        var removeRedundantUpdates = new ArrayList<Update>();
+//        for (var i : allUpdates) {
+//            List<Update> simplestDescendants = removeSubsumedEdits(getAllDescendants(i)
+//                    .filter(x -> x.getExplanation().isPresent())
+//                    .filter(allUpdates::contains)
+//                    .collect(toList()));
+//
+//            if (applyUpdatesAndMatch(simplestDescendants, i.getBeforeStr(), i.getAfterStr())
+//                    && !i.getAsInstance().isRelevant())
+//                removeRedundantUpdates.add(i);
+//            else
+//                merges.put(i, simplestDescendants);
+//        }
+//
+//        allUpdates = allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
+//
+//        for (var upd : allUpdates) {
+//            if (merges.containsKey(upd)) {
+//                Tuple2<Update, List<Update>> candidates = Tuple.of(upd, merges.get(upd));
+//                Optional<MatchReplace> e = candidates._1().getExplanation();
+//                if(e.isEmpty()) continue;
+//                for (var child : candidates._2()) {
+//                    if(child.getExplanation().isEmpty()) continue;
+//                    e = MatchReplace.mergeParentChildMatchReplace(e.get(), child.getExplanation().get());
+//                    if (e.isEmpty())
+//                        break;
+//                    System.out.println();
+//                }
+//                if (e.isPresent()) {
+//                    if(candidates._1().getExplanation().isPresent())
+//                        if(e.get().getMatchReplace().equals(candidates._1().getExplanation().get().getMatchReplace()))
+//                            continue;
+//                    upd.setExplanation(e);
+//                }else{
+////                    removeRedundantUpdates.addAll(candidates._2());
+//                }
+//            }
+//        }
+//
+//        return allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
+//    }
 
 
-        if (b4.isPresent() && aftr.isPresent()) {
-            Tuple2<String, Map<String, String>> newTemplate_renamesB4 = renameTemplateVariable(child.getMatchReplace()._1(), x -> b4.get()._1() + "x" + x);
-            Tuple2<String, Map<String, String>> newTemplate_renamesAfter = renameTemplateVariable(child.getMatchReplace()._2(), x -> aftr.get()._1() + "x" + x);
-            String mergedB4 = parent.getMatchReplace()._1().replace("\\\"", "\"").replace(b4.get()._2(), newTemplate_renamesB4._1());
-            String mergedAfter = parent.getMatchReplace()._2().replace("\\\"", "\"").replace(aftr.get()._2(), newTemplate_renamesAfter._1());
-
-            if (mergedB4.equals(parent.getMatchReplace()._1().replace("\\\"", "\""))
-                    && mergedAfter.equals(parent.getMatchReplace()._2().replace("\\\"", "\"")))
-                return Optional.of(parent);
-
-
-            Optional<Match> newExplainationBefore = getMatch(mergedB4, parent.getCodeSnippetB4(), null)
-                    .filter(x -> isPerfectMatch(parent.getCodeSnippetB4(), x))
-                    .map(x -> x.getMatches().get(0));
-
-            Optional<Match> newExplainationAfter = getMatch(mergedAfter, parent.getCodeSnippetAfter(), null)
-                    .filter(x -> isPerfectMatch(parent.getCodeSnippetAfter(), x))
-                    .map(x -> x.getMatches().get(0));
-            if (newExplainationAfter.isPresent() && newExplainationBefore.isPresent())
-                return Optional.of(new MatchReplace(new PerfectMatch(parent.getMatch().getName() + "----" + child.getMatch().getName(), mergedB4, newExplainationBefore.get()),
-                        new PerfectMatch(parent.getReplace().getName() + "----" + child.getReplace().getName(), mergedAfter, newExplainationAfter.get())));
-        }
-        }catch (Exception e){
-            e.printStackTrace();
-            return Optional.empty();
-        }
-        return Optional.empty();
-
-    }
 }

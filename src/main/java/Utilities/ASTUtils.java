@@ -201,8 +201,17 @@ public class ASTUtils {
 //    }
 
     public static Stream<Tree> getChildren(Tree root1) {
+//        if(root1.getChildren().size() == 1){
+//            Tree onlyChild = root1.getChildren().get(0);
+//            if(onlyChild.getPos()==root1.getPos() && onlyChild.getEndPos() == root1.getEndPos())
+//                return getChildren(onlyChild);
+//        }
         return root1.getChildren().stream()
-                .flatMap(c -> c.getType().name.equals("METHOD_INVOCATION_ARGUMENTS") ? c.getChildren().stream() : Stream.of(c));
+                .flatMap(c -> {
+                    if (c.getType().name.equals("METHOD_INVOCATION_ARGUMENTS"))
+                        return c.getChildren().stream();
+                    return Stream.of(c);
+                });
     }
 
     public static Optional<ASTNode> getCoveringNode(ASTNode node, Tree tree) {

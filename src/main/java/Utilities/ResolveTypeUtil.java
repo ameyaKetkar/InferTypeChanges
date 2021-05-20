@@ -3,6 +3,7 @@ package Utilities;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import org.checkerframework.checker.nullness.Opt;
 import org.refactoringminer.RMinerUtils;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.PerfectMatch;
@@ -36,18 +37,14 @@ public class ResolveTypeUtil {
 
         if (matchedTypeSyntax._1().isEmpty() || matchedTypeSyntax._2().isEmpty())
             return Optional.empty();
-
-        MatchReplace expl = new MatchReplace(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get());
-        Tuple2<String, String> enrichedMatchReplace = tryToresolveTypes(expl, typeChanges);
-
-        if (enrichedMatchReplace._1().contains(":[") && !enrichedMatchReplace._2().contains(":["))
-            System.out.println();
-
-        if (!enrichedMatchReplace._1().contains(":[") && enrichedMatchReplace._2().contains(":["))
-            System.out.println();
-
-//        System.out.println(reportedTypeChange + " -> " + enrichedMatchReplace);
-        return Optional.ofNullable(enrichedMatchReplace);
+        try {
+            MatchReplace expl = new MatchReplace(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get());
+            Tuple2<String, String> enrichedMatchReplace = tryToresolveTypes(expl, typeChanges);
+            return Optional.of(enrichedMatchReplace);
+        }catch (Exception e){
+            e.printStackTrace();
+            return Optional.empty();
+        }
     }
 
     private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {

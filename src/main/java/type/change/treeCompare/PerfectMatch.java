@@ -21,6 +21,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.CombyUtils.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 public class PerfectMatch {
 
@@ -41,6 +43,26 @@ public class PerfectMatch {
         Template = template;
         Match = cm.getMatches().get(0);
         CodeSnippet = Match.getMatched();
+    }
+
+    // Renames the after to before in the after template
+    public static Tuple2<PerfectMatch, PerfectMatch> safeRename(PerfectMatch before, PerfectMatch after, Map<String, String> afterNameBeforeName){
+        Map<String, String> templateVariableMapping = after.getTemplateVariableMapping();
+        // conflict check
+        List<String> conflictingBeforeNames = afterNameBeforeName.values().stream().filter(x -> templateVariableMapping.keySet().contains(x))
+                .collect(toList());
+
+        afterNameBeforeName = afterNameBeforeName.entrySet().stream()
+                .collect(toMap(x -> x.getKey(), x -> conflictingBeforeNames.contains(x.getValue()) ? x.getValue() + "z": x.getValue()));
+
+        Map<String, String> beforeNameNewBeforeName = conflictingBeforeNames.stream().collect(toMap(x -> x, x -> x + "z"));
+
+        after = after.rename(afterNameBeforeName);
+
+        if(!beforeNameNewBeforeName.isEmpty())
+            before = before.rename(beforeNameNewBeforeName);
+
+        return Tuple.of(before, after);
     }
 
     public PerfectMatch rename(Map<String, String> renames){
