@@ -18,14 +18,14 @@ Instance = namedtuple('Instance', ['OriginalCompleteBefore', 'OriginalCompleteAf
 fileDir = parent('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/')
 env = Environment(loader=FileSystemLoader(os.path.join(fileDir, "templates")))
 
-GeneralDicts = lambda data: GeneralDictsTemplate.render(cols=data[0], body=data[1], Title=data[2],
-                                                        col_types=data[3], css=data[4])
+GeneralDicts = lambda data: GeneralDictsTemplate.render(cols=data[0], body=data[1], Title=data[2], col_types=data[3],
+                                                        css=data[4])
 
 GeneralDictsTemplate = env.get_template("GeneralDictionariesTemplate.html")
 
 
 def apply_template_to(write_to_file, data):
-    with open(os.path.join(write_to_file), 'w+') as fh:
+    with open(os.path.join(write_to_file), 'w+') as fh: 
         fh.write(GeneralDicts(data))
         fh.close()
 
@@ -33,9 +33,10 @@ def apply_template_to(write_to_file, data):
 def json_to_html(json_data):
     return json2html.convert(json=json_data, escape=False)
 
+
 def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
     if forWhat == 'Statement Mappings':
-        colNames = ['Match', 'Replace', 'Instances','Relevant Instances', 'Commits', 'Project', 'Link']
+        colNames = ['Match', 'Replace', 'Instances', 'Relevant Instances', 'Commits', 'Project', 'Link']
         col_types = '[\'string\',\'string\', \'number\', \'number\', \'number\',\'number\',\'string\']'
         template = 'GeneralDicts'
         Title = 'Mapping Summary for ' + str(typeChange)
@@ -54,12 +55,12 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
             body.append([str(v1[c]) for c in colNames])
         apply_template_to(htmlPage, (colNames, body, Title, col_types, ".."))
 
+
 excludeTcs = [('java.lang.String', 'java.util.Optional<:[tar]>')]
 
 res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsRemote"
 if not os.path.exists(res):
     os.mkdir(res)
-
 
 with open(os.path.join(parent(res), "output.jsonl")) as c:
     lines = c.readlines()
@@ -86,7 +87,7 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
             mapping_details = os.path.join(typeChangeFolder, mapping_id + ".html")
             mappingSummary[mapping_id] = {'Match': matchReplace[0], 'Replace': matchReplace[1],
                                           'Instances': len(instances),
-                                          'Relevant Instances' : len([i for i in instances if i['isRelevant']]),
+                                          'Relevant Instances': len([i for i in instances if i['isRelevant']]),
                                           'Commits': len({inst['Commit'] for inst in instances}),
                                           'Project': len({inst['Project'] for inst in instances}),
                                           'Link': "<a href=" + mapping_details + ">Link</a>"}
@@ -101,7 +102,8 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
 
         createHTMLTableFor(str(typeChange), mappingSummary, 'Statement Mappings', mappingSummaryPath)
 
-        typeChangeSummary[typeChangeID] = {'Before Type': html.escape(typeChange[0]), 'After Type': html.escape(typeChange[1]),
+        typeChangeSummary[typeChangeID] = {'Before Type': html.escape(typeChange[0]),
+                                           'After Type': html.escape(typeChange[1]),
                                            'Mappings': "<a href=" + mappingSummaryPath + ">" + str(
                                                len(mappings)) + "</a>"}
 

@@ -93,7 +93,7 @@ public class CaptureMappingsLike {
             put("primDouble", Tuple.of(":[[s~\bdouble\b]]",s -> s.contains("double")));
             put("primByte", Tuple.of(":[[s~\bbyte\b]]",s -> s.contains("byte")));
             put("primBool", Tuple.of(":[[s~\bboolean\b]]",s -> s.contains("boolean")));
-            put("SimpleType", Tuple.of(":[[c]]",s -> !s.contains(" ")));
+            put("SimpleType", Tuple.of(":[[s]]",s -> !s.contains(" ")));
             put("ParameterizedType3", Tuple.of(":[c~\\w+[?:\\.\\w+]+]<:[t1r],:[t2r],:[t3r]>",s -> s.contains("<")));
             put("ParameterizedType2", Tuple.of(":[c~\\w+[?:\\.\\w+]+]<:[tar],:[tbr]>",s -> s.contains("<")));
             put("ParameterizedType1", Tuple.of(":[c~\\w+[?:\\.\\w+]+]<:[tar]>",s -> s.contains("<")));

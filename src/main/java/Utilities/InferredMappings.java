@@ -10,6 +10,9 @@ import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.Update;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;

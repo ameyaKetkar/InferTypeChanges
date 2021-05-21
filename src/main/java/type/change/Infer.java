@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -55,7 +56,7 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("8f94c"))
+        if(!commit.startsWith("4428e96024ae631b8c299dc7fcda657b35e7e7a8"))
             return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
@@ -92,7 +93,10 @@ public class Infer {
         }
 
         // All the reported renames
-        Set<Tuple2<String, String>> allRenames = allRefactorings.stream().filter(r -> !r.getBeforeName().equals(r.getAfterName()))
+        Set<Tuple2<String, String>> allRenames = allRefactorings.stream()
+                .filter(x -> x.getB4Type() != null)
+                .filter(x -> !x.getReferences().stream().allMatch(y -> y.getBeforeStmt().contains("return ")))
+                .filter(r -> !r.getBeforeName().equals(r.getAfterName()))
                 .map(r -> Tuple.of(r.getBeforeName(), r.getAfterName())).collect(toSet());
 
 
@@ -114,12 +118,14 @@ public class Infer {
             }
 
              return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+                     .filter(x -> x.getAfter().contains("DefaultServer.setRootHandler(new PathHandler()"))
                     .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                             .thenApply(ls -> ls.stream().map(a -> new Gson()
                                     .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
                                     .collect(joining("\n")))
                             .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
-                                    .writeToFile(s, outputFile)));
+                                    .writeToFile(s, outputFile))//.orTimeout(60, TimeUnit.SECONDS)
+                    );
         });
 
     }
@@ -135,18 +141,21 @@ public class Infer {
                 .collect(toList());
     }
 
-    private static List<Update> inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit) {
+    private static List<Update>  inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit) {
 
         List<Update> explainableUpdates = new ArrayList<>();
         String stmtB4 = codeMapping.getB4();
         String nameB4 = typeChange.getBeforeName();
         String nameAfter = typeChange.getAfterName();
+            //.filter(x -> !x.getReferences().stream().allMatch(y -> y.getBeforeStmt().contains("return ")))
 
-
-        String stmtAftr = CombyUtils.performIdentifierRename(nameB4, nameAfter, codeMapping.getAfter());
+        String stmtAftr = codeMapping.getAfter();
+        if(typeChange.getReferences().size() == 0 || !typeChange.getReferences().stream().allMatch(y -> y.getBeforeStmt().contains("return "))) {
+            stmtAftr = CombyUtils.performIdentifierRename(nameB4, nameAfter, codeMapping.getAfter());
+        }
         for (Tuple2<String, String> rn : otherRenames)
             if (stmtB4.contains(rn._1()) && stmtAftr.contains(rn._2()))
-                stmtAftr = CombyUtils.performIdentifierRename(rn._1(), rn._2(), codeMapping.getAfter());
+                stmtAftr = CombyUtils.performIdentifierRename(rn._1(), rn._2(), stmtAftr);
 
         var stmt_b = ASTUtils.getStatement(stmtB4.replace("\n", ""));
         var stmt_a = ASTUtils.getStatement(stmtAftr.replace("\n", ""));

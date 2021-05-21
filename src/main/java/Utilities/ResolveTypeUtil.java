@@ -88,7 +88,7 @@ public class ResolveTypeUtil {
     private static String performRenameIdentifier(String source, Map<String, String> renameMapping) {
         String curr = source;
         for (var e : renameMapping.entrySet()) {
-            curr = performIdentifierRename(e.getValue(), e.getKey(), source);
+            curr = performIdentifierRename(e.getValue(), e.getKey(), curr);
         }
         return curr;
     }
