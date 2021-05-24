@@ -34,10 +34,7 @@ public class PerfectMatch {
     }
 
     public PerfectMatch(String name, String template, CombyMatch cm){
-        Name = name;
-        Template = template;
-        Match = cm.getMatches().get(0);
-        CodeSnippet = Match.getMatched();
+        this(name,template, cm.getMatches().get(0));
     }
 
     // Renames the after to before in the after template
@@ -88,7 +85,7 @@ public class PerfectMatch {
     }
 
 
-    public PerfectMatch substitute(String newTemplate){
+    public PerfectMatch updateTemplate(String newTemplate){
         Optional<PerfectMatch> perfectMatch = getPerfectMatch(newTemplate, CodeSnippet, null)
                 .or(() -> getPerfectMatch(newTemplate, CodeSnippet, ".xml"))
                 .map(x -> new PerfectMatch(Name, newTemplate, x));
@@ -154,46 +151,4 @@ public class PerfectMatch {
         return Optional.empty();
     }
 
-
-
-//    static Optional<PerfectMatch> getMatch(Tuple2<String, String> name_template, Match cm, String source,
-//                                                            List<String> recurssiveTVs) {
-//
-//        Optional<PerfectMatch> result = Optional.empty();
-//
-//        if(isPerfectMatch(source, cm) && recurssiveTVs.isEmpty())
-//            return Optional.of(new PerfectMatch(name_template._1(), name_template._2(), cm));
-//
-//        for (int i = 0, recurssiveTVsSize = recurssiveTVs.size(); i < recurssiveTVsSize; i++) {
-//            String tv = recurssiveTVs.get(i);
-//            Environment env = cm.getEnvironment().stream().filter(x -> x.getVariable().equals(tv)).findFirst().orElse(null);
-//            if(env == null)
-//                continue;
-//            for (Entry<String, Tuple2<String, Predicate<String>>> var_values : CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet()) {
-//                Predicate<String> heuristic = var_values.getValue()._2();
-//                boolean tv_Val_matches = env!= null && heuristic.test(env.getValue());
-//                boolean anyRemaining = !source.replace("\\\"", "\"").equals(cm.getMatched());
-//                boolean remainingMatches = anyRemaining && heuristic.test(source.replace("\\\"", "\"").replace(cm.getMatched(), ""));
-//                if (!tv_Val_matches && !remainingMatches) continue;
-//                Tuple2<String, Map<String, String>> newTemplate_renames = renameTemplateVariable(var_values.getValue()._1(), x -> tv + "x" + x);
-//                String tryTemplate = CombyUtils.substitute(name_template._2(), tv, newTemplate_renames._1());
-//                Optional<CombyMatch> match = CombyUtils.getMatch(tryTemplate, source, null);
-//                if (match.isPresent()) {
-//                    for (var m : match.get().getMatches()) {
-//                        if (m.getMatched().equals(cm.getMatched()) || m.getMatched().contains(cm.getMatched())) {
-//                            List<String> recurssiveTVs_Temp = Stream.concat(recurssiveTVs.subList(i + 1, recurssiveTVsSize).stream(),
-//                                    Stream.ofNullable(newTemplate_renames._2().getOrDefault("r", null)))
-//                                    .collect(Collectors.toList());
-//                            result = getMatch(name_template.map(x -> String.format("%s--%s", var_values.getKey(), x), x -> tryTemplate), m,
-//                                    source, recurssiveTVs_Temp);
-//                            if (result.isPresent()) break;
-//                        }
-//                    }
-//                    if (result.isPresent()) break;
-//                }
-//            }
-//            if (result.isPresent()) break;
-//        }
-//        return result;
-//    }
 }

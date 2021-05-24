@@ -56,7 +56,7 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("a9f1057acaa110423147402bd16764f06cbdec5d"))
+        if(!commit.startsWith("72852b6950020a1aab0e87f21707948501f95df4"))
             return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
@@ -118,7 +118,7 @@ public class Infer {
             }
 
         return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
-                 .filter(x -> x.getAfter().contains("synchronized"))
+                 .filter(x -> x.getAfter().contains("Optional.ofNullable"))
                 .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                         .thenApply(ls -> ls.stream().map(a -> new Gson()
                                 .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))

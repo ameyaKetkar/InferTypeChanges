@@ -171,17 +171,14 @@ public class GetUpdate {
 
         Optional<PerfectMatch> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
                 : PerfectMatch.getMatch(afterNode);
+
         matchesAfter.put(loc_aftr, explanationAfter);
 
         if (explanationAfter.isEmpty() || (explanationBefore.get().getName().equals(explanationAfter.get().getName())
                 && Stream.of(":[[id]]", ":[a~\\\".*\\\"]").anyMatch(x -> explanationAfter.get().getName().equals(x))))
             return Optional.empty();
 
-
-        return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get()))
-                .onFailure(e -> e.printStackTrace())
-                .toJavaOptional();
-
+        return Optional.of(new MatchReplace(explanationBefore.get(), explanationAfter.get()));
     }
 
 }

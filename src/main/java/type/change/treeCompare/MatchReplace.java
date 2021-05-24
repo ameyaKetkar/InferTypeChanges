@@ -27,44 +27,51 @@ public class MatchReplace {
     private final Map<String, Range__1> UnMatchedAfterRange;
     private final Map<String, Range__1> UnMatchedBeforeRange;
 
-    public MatchReplace(PerfectMatch before, PerfectMatch after) throws Exception {
+    public MatchReplace(PerfectMatch before, PerfectMatch after) {
         Map<String, String> intersectingTemplateVars = getIntersection(before, after);
         Tuple2<PerfectMatch, PerfectMatch> sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
-        before = sf._1;
-        after = sf._2();
+        before = sf._1; after = sf._2();
         intersectingTemplateVars = getIntersection(before, after);
-        //        after = after.rename(intersectingTemplateVars);
-        Optional<Either<String, String>> nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, null);
-        int i = 6;
-        while (nxtDcmp.isPresent() && i >= 0) {
-            if (nxtDcmp.get().isLeft())
-                before = before.decompose(nxtDcmp.get().getLeft()).orElse(before);
+        Optional<Either<String, String>> wrapUnWrap = isWrapUnWrap(before, after);
+        if(wrapUnWrap.isPresent()){
+            if (wrapUnWrap.get().isLeft())
+                after = after.updateTemplate(":["+wrapUnWrap.get().getLeft()+"]");
             else
-                after = after.decompose(nxtDcmp.get().get()).orElse(after);
+                before = before.updateTemplate(":["+wrapUnWrap.get().get()+"]");
             intersectingTemplateVars = getIntersection(before, after);
             sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
-            //        after = after.rename(intersectingTemplateVars);
-            before = sf._1;
-            after = sf._2();
-
-            nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, nxtDcmp.get());
-            i -= 1;
-
+            intersectingTemplateVars = getIntersection(before, after);
+            before = sf._1; after = sf._2();
+        }
+        else {
+            Optional<Either<String, String>> nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, null);
+            int i = 6;
+            while (nxtDcmp.isPresent() && i >= 0) {
+                if (nxtDcmp.get().isLeft())
+                    before = before.decompose(nxtDcmp.get().getLeft()).orElse(before);
+                else
+                    after = after.decompose(nxtDcmp.get().get()).orElse(after);
+                intersectingTemplateVars = getIntersection(before, after);
+                sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
+                intersectingTemplateVars = getIntersection(before, after);
+                before = sf._1; after = sf._2();
+                nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, nxtDcmp.get());
+                i -= 1;
+            }
         }
         Collection<String> finalIntersectingTemplateVars = intersectingTemplateVars.values();
-        PerfectMatch finalAfter = after;
-        PerfectMatch finalBefore = before;
+        PerfectMatch finalAfter = after, finalBefore = before;
         this.TemplateVariableDeclarations = before.getTemplateVariableMapping().entrySet()
                 .stream().filter(x -> !x.getKey().endsWith("c") && finalIntersectingTemplateVars.contains(x.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
         this.UnMatchedBefore = notInTemplateVariableDeclarations(before.getTemplateVariableMapping());
         this.UnMatchedBeforeRange = UnMatchedBefore.keySet().stream()
                 .collect(toMap(x -> x, x -> finalBefore.getTemplateVariableMappingRange().get(x)));
-        this.Match = before.substitute(CombyUtils.substitute(before.getTemplate(), UnMatchedBefore));
+        this.Match = before.updateTemplate(CombyUtils.substitute(before.getTemplate(), UnMatchedBefore));
         this.UnMatchedAfter = notInTemplateVariableDeclarations(after.getTemplateVariableMapping());
         this.UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
                 .collect(toMap(x -> x, x -> finalAfter.getTemplateVariableMappingRange().get(x)));
-        this.Replace = after.substitute(CombyUtils.substitute(after.getTemplate(), UnMatchedAfter));
+        this.Replace = after.updateTemplate(CombyUtils.substitute(after.getTemplate(), UnMatchedAfter));
     }
 
 
@@ -86,6 +93,20 @@ public class MatchReplace {
                     if (!r.equals(prev))
                         return Optional.of(r);
                 }
+            }
+        }
+        return Optional.empty();
+    }
+
+    public Optional<Either<String, String>> isWrapUnWrap(PerfectMatch before, PerfectMatch after){
+        for (var eb : before.getTemplateVariableMapping().entrySet()) {
+            if(eb.getValue().equals(after.getCodeSnippet())){
+                return Optional.of(Either.left(eb.getKey()));
+            }
+        }
+        for (var ea : after.getTemplateVariableMapping().entrySet()) {
+            if(ea.getValue().equals(before.getCodeSnippet())){
+                return Optional.of(Either.right(ea.getKey()));
             }
         }
         return Optional.empty();

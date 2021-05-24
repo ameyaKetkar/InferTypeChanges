@@ -96,13 +96,11 @@
       {
         "Before": "Lists.newArrayList()",
         "After": "Sets.newHashSet()",
-
         "RequiredImports": "com.google.common.collect.Sets"
       },
       {
         "Before": "Lists.newArrayList($2$)",
         "After": "Sets.newHashSet($2$)",
-
         "RequiredImports": "com.google.common.collect.Sets"
       },
       {
@@ -282,8 +280,8 @@
     "Kind": "Reactive",
     "Rules": [
       {
-        "Before": "$1~\\d$",
-        "After": "$1~\\d$L"
+        "Before": "$1~\\d+",
+        "After": "$1~\\d+L"
       },
       {
         "Before": "Integer.parseInt($2$)",
