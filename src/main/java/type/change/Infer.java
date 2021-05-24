@@ -56,7 +56,7 @@ public class Infer {
 
     public static Stream<CompletableFuture<Void>> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("4428e96024ae631b8c299dc7fcda657b35e7e7a8"))
+        if(!commit.startsWith("a9f1057acaa110423147402bd16764f06cbdec5d"))
             return Stream.empty();
 
         System.out.println("Analyzing commit " + commit + " " + repoName);
@@ -118,7 +118,7 @@ public class Infer {
             }
 
         return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
-                 .filter(x -> x.getAfter().contains("DefaultServer.setRootHandler(new PathHandler()"))
+                 .filter(x -> x.getAfter().contains("synchronized"))
                 .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                         .thenApply(ls -> ls.stream().map(a -> new Gson()
                                 .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
@@ -198,66 +198,6 @@ public class Infer {
 
         return explainableUpdates;
     }
-
-
-//    public static List<Update> explainableUpdates(Update u) {
-//        // Collect all updates!
-//        Collection<Update> allUpdates = Stream.concat(Stream.of(u), getAllDescendants(u))
-//                .filter(i -> i.getExplanation().isPresent())
-//                .collect(toList());
-//
-////        allUpdates = allUpdates.stream().collect(groupingBy(x -> Tuple.of(Tuple.of(x.getBefore().getPos(), x.getBefore().getEndPos()), Tuple.of(
-////                x.getAfter().getPos(), x.getAfter().getEndPos())), collectingAndThen(toList(), x -> x.stream().findFirst().get())))
-////                .values();
-//
-//        if (allUpdates.size() == 1)
-//            return new ArrayList<>(allUpdates);
-//
-//        // IF Descendants explain the change partially then remove descendants
-//        // IF Descendants explain the change incorrectly then remove descendants
-//        // IF descendants completely explain the change, then remove the ancestors
-//        Map<Update, List<Update>> merges = new HashMap<>();
-//        var removeRedundantUpdates = new ArrayList<Update>();
-//        for (var i : allUpdates) {
-//            List<Update> simplestDescendants = removeSubsumedEdits(getAllDescendants(i)
-//                    .filter(x -> x.getExplanation().isPresent())
-//                    .filter(allUpdates::contains)
-//                    .collect(toList()));
-//
-//            if (applyUpdatesAndMatch(simplestDescendants, i.getBeforeStr(), i.getAfterStr())
-//                    && !i.getAsInstance().isRelevant())
-//                removeRedundantUpdates.add(i);
-//            else
-//                merges.put(i, simplestDescendants);
-//        }
-//
-//        allUpdates = allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
-//
-//        for (var upd : allUpdates) {
-//            if (merges.containsKey(upd)) {
-//                Tuple2<Update, List<Update>> candidates = Tuple.of(upd, merges.get(upd));
-//                Optional<MatchReplace> e = candidates._1().getExplanation();
-//                if(e.isEmpty()) continue;
-//                for (var child : candidates._2()) {
-//                    if(child.getExplanation().isEmpty()) continue;
-//                    e = MatchReplace.mergeParentChildMatchReplace(e.get(), child.getExplanation().get());
-//                    if (e.isEmpty())
-//                        break;
-//                    System.out.println();
-//                }
-//                if (e.isPresent()) {
-//                    if(candidates._1().getExplanation().isPresent())
-//                        if(e.get().getMatchReplace().equals(candidates._1().getExplanation().get().getMatchReplace()))
-//                            continue;
-//                    upd.setExplanation(e);
-//                }else{
-////                    removeRedundantUpdates.addAll(candidates._2());
-//                }
-//            }
-//        }
-//
-//        return allUpdates.stream().filter(x -> !removeRedundantUpdates.contains(x)).collect(toList());
-//    }
 
 
 }

@@ -31,14 +31,13 @@ def apply_template_to(write_to_file, data):
 
 
 def json_to_html(json_data):
-    return json2html.convert(json=json_data, escape=False)
+    return json2html.convert(json=json_data, escape=True)
 
 
 def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
     if forWhat == 'Statement Mappings':
         colNames = ['Match', 'Replace', 'Instances', 'Relevant Instances', 'Commits', 'Project', 'Link']
         col_types = '[\'string\',\'string\', \'number\', \'number\', \'number\',\'number\',\'string\']'
-        template = 'GeneralDicts'
         Title = 'Mapping Summary for ' + str(typeChange)
         body = []
         for k, v1 in mappingSummary.items():
@@ -48,7 +47,6 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
     if forWhat == 'Type Change Summary':
         colNames = ['Before Type', 'After Type', 'Mappings']
         col_types = '[\'string\',\'string\', \'number\']'
-        template = 'GeneralDicts'
         Title = 'TypeChange Summary'
         body = []
         for k, v1 in mappingSummary.items():
@@ -85,7 +83,7 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
             print(i)
             mapping_id = 'Mapping-' + str(i)
             mapping_details = os.path.join(typeChangeFolder, mapping_id + ".html")
-            mappingSummary[mapping_id] = {'Match': matchReplace[0], 'Replace': matchReplace[1],
+            mappingSummary[mapping_id] = {'Match': html.escape(matchReplace[0]), 'Replace': html.escape(matchReplace[1]),
                                           'Instances': len(instances),
                                           'Relevant Instances': len([i for i in instances if i['isRelevant']]),
                                           'Commits': len({inst['Commit'] for inst in instances}),

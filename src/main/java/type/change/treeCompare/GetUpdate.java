@@ -1,8 +1,6 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
-import Utilities.CombyUtils;
-import Utilities.comby.Environment;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
@@ -15,8 +13,6 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.refactoringminer.RMinerUtils.TypeChange;
 
 import java.util.*;
-import java.util.function.IntFunction;
-import java.util.function.ToIntBiFunction;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
@@ -62,7 +58,7 @@ public class GetUpdate {
         }
         
         Optional<MatchReplace> explanation = before instanceof Expression && after instanceof Expression ?
-                getInstance(before.toString(), after.toString(), Tuple.of(root1.getPos(), root1.getEndPos())
+                getInstance(Tuple.of(root1.getPos(), root1.getEndPos())
                             , Tuple.of(root2.getPos(), root2.getEndPos()), before, after)
                 : Optional.empty();
         Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation, codeMapping, typeChange);
@@ -137,12 +133,12 @@ public class GetUpdate {
             }
         }
 
-        ToIntFunction<Tuple3<String, String, Update>> fn = upd -> Stream.concat(Stream.of(upd._3()), getAllDescendants(upd._3()))
+        ToIntFunction<Tuple3<String, String, Update>> overlaps = upd -> Stream.concat(Stream.of(upd._3()), getAllDescendants(upd._3()))
                 .filter(i -> i.getExplanation().isPresent())
                 .mapToInt(e -> e.getExplanation().get().getTemplateVariableDeclarations().size())
                 .sum();
 
-        holeForEachPair.sort(reverseOrder(comparingInt(fn)));
+        holeForEachPair.sort(reverseOrder(comparingInt(overlaps)));
 
         List<Update> result = new ArrayList<>();
         Set<String> alreadyConsideredB4 = new HashSet<>();
@@ -159,14 +155,14 @@ public class GetUpdate {
         return result;
     }
 
-    public Optional<Update> getUpdate(ASTNode before, ASTNode after) {
+    public Optional<Update>  getUpdate(ASTNode before, ASTNode after) {
         Tree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
         Tree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
         return getUpdate(before, after, root1, root2);
     }
 
-    public Optional<MatchReplace> getInstance(String before, String after, Tuple2<Integer, Integer> loc_b4,
-                                           Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode) {
+    public Optional<MatchReplace> getInstance(Tuple2<Integer, Integer> loc_b4,
+                                              Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode) {
 
         Optional<PerfectMatch> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
                 : PerfectMatch.getMatch(beforeNode);
@@ -187,13 +183,6 @@ public class GetUpdate {
                 .toJavaOptional();
 
     }
-
-
-
-    /*
-    pattern: 1= pattern name, 2= pattern with holes
-     */
-
 
 }
 
