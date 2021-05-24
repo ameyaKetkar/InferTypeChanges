@@ -1,5 +1,5 @@
 from os.path import join, exists
-from comby.RW import readAll
+from RW import readAll
 from Models.Models.PrettyPrint import pretty
 from collections import namedtuple as nt
 import json

@@ -132,18 +132,37 @@ public class ASTUtils {
 //        return tokens;
 //    }
 
-    public static Optional<Statement> getStatement(String expr) {
+    public static Optional<Expression> getExpression(String expr) {
         try {
-            ASTParser parser = ASTParser.newParser(AST.JLS15);
-            parser.setKind(ASTParser.K_STATEMENTS);
-            Map<String, String> pOptions = JavaCore.getOptions();
-            pOptions.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_11);
-            pOptions.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_11);
-            pOptions.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_11);
-            pOptions.put(JavaCore.COMPILER_DOC_COMMENT_SUPPORT, JavaCore.ENABLED);
-            parser.setStatementsRecovery(true);
-            parser.setCompilerOptions(pOptions);
+            ASTParser parser = getParser(ASTParser.K_EXPRESSION);
             char[] source = expr.toCharArray();
+            parser.setSource(source);
+            IScanner scanner = ToolFactory.createScanner(false, false, false, false);
+            scanner.setSource(source);
+            ASTNode node = parser.createAST(null);
+            return Optional.ofNullable((Expression) node);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    private static ASTParser getParser(int kExpression) {
+        ASTParser parser = ASTParser.newParser(AST.JLS15);
+        parser.setKind(kExpression);
+        Map<String, String> pOptions = JavaCore.getOptions();
+        pOptions.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_11);
+        pOptions.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_11);
+        pOptions.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_11);
+        pOptions.put(JavaCore.COMPILER_DOC_COMMENT_SUPPORT, JavaCore.ENABLED);
+        parser.setStatementsRecovery(true);
+        parser.setCompilerOptions(pOptions);
+        return parser;
+    }
+
+    public static Optional<Statement> getStatement(String stmt) {
+        try {
+            ASTParser parser = getParser(ASTParser.K_STATEMENTS);
+            char[] source = stmt.toCharArray();
             parser.setSource(source);
             IScanner scanner = ToolFactory.createScanner(false, false, false, false);
             scanner.setSource(source);
@@ -153,22 +172,22 @@ public class ASTUtils {
             return Optional.empty();
         }
     }
-
-    public static Tuple2<MappingStore, List<Action>> getGumTreeEditScript(ASTNode before, ASTNode after) {
-//        try {
-//            TreeContext src = getGumTreeContextForASTNode(before).orElseThrow();
-//            TreeContext dst = getGumTreeContextForASTNode(after).orElseThrow();
-//            Matcher m = Matchers.getInstance().getMatcher("gumtree-simple");
-//            EditScriptGenerator e = new SimplifiedChawatheScriptGenerator();
-//            if (src == null || dst == null) return Tuple.of(null, new ArrayList<>());
-//            MappingStore match = m.match(src.getRoot(), dst.getRoot());
-//            EditScript editScript = e.computeActions(match);
-//            return Tuple.of(match, editScript.asList());
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-        return Tuple.of(null, new ArrayList<>());
-    }
+//
+//    public static Tuple2<MappingStore, List<Action>> getGumTreeEditScript(ASTNode before, ASTNode after) {
+////        try {
+////            TreeContext src = getGumTreeContextForASTNode(before).orElseThrow();
+////            TreeContext dst = getGumTreeContextForASTNode(after).orElseThrow();
+////            Matcher m = Matchers.getInstance().getMatcher("gumtree-simple");
+////            EditScriptGenerator e = new SimplifiedChawatheScriptGenerator();
+////            if (src == null || dst == null) return Tuple.of(null, new ArrayList<>());
+////            MappingStore match = m.match(src.getRoot(), dst.getRoot());
+////            EditScript editScript = e.computeActions(match);
+////            return Tuple.of(match, editScript.asList());
+////        } catch (Exception e) {
+////            e.printStackTrace();
+////        }
+//        return Tuple.of(null, new ArrayList<>());
+//    }
 
 
 //    public static IUpdate getUpdateNew(ASTNode before, ASTNode after) {

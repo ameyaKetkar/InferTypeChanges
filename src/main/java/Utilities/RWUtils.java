@@ -27,6 +27,17 @@ public class RWUtils {
         return (T) result;
     }
 
+    public static String escapeMetaCharacters(String inputString){
+        final String[] metaCharacters = {"\\","^","$","{","}","[","]","(",")",".","*","+","?","|","<",">","-","&","%"};
+
+        for (int i = 0 ; i < metaCharacters.length ; i++){
+            if(inputString.contains(metaCharacters[i])){
+                inputString = inputString.replace(metaCharacters[i],"\\"+metaCharacters[i]);
+            }
+        }
+        return inputString;
+    }
+
     public static class FileWriterSingleton {
         public static final FileWriterSingleton inst= new FileWriterSingleton();
         private FileWriterSingleton() {

@@ -117,15 +117,15 @@ public class Infer {
                 return Stream.empty();
             }
 
-             return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
-                     .filter(x -> x.getAfter().contains("DefaultServer.setRootHandler(new PathHandler()"))
-                    .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
-                            .thenApply(ls -> ls.stream().map(a -> new Gson()
-                                    .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
-                                    .collect(joining("\n")))
-                            .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
-                                    .writeToFile(s, outputFile))//.orTimeout(60, TimeUnit.SECONDS)
-                    );
+        return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+                 .filter(x -> x.getAfter().contains("DefaultServer.setRootHandler(new PathHandler()"))
+                .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
+                        .thenApply(ls -> ls.stream().map(a -> new Gson()
+                                .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
+                                .collect(joining("\n")))
+                        .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
+                                .writeToFile(s, outputFile))//.orTimeout(60, TimeUnit.SECONDS)
+                );
         });
 
     }

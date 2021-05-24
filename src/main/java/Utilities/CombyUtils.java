@@ -1,12 +1,11 @@
 package Utilities;
 
-import com.google.gson.Gson;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
 import Utilities.comby.CombyMatch;
 import Utilities.comby.CombyRewrite;
 import Utilities.comby.Environment;
-import Utilities.comby.Match;
+import com.google.gson.Gson;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,11 +14,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static Utilities.CaptureMappingsLike.STOCK_TVs;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public class CombyUtils {
 
@@ -30,7 +28,7 @@ public class CombyUtils {
 
         try {
 //            System.out.println("MATCH        "  + template + "       " + source);
-            String result = getMatchCmd(template, source, language);
+            String result = getMatchCmd(template, source, language, null);
             CombyMatch cm = new Gson().fromJson(result, CombyMatch.class);
 
             if(cm != null) {
@@ -44,10 +42,17 @@ public class CombyUtils {
         }
     }
 
-    public static String getMatchCmd(String template, String source, String language) throws IOException {
-        String command = "echo '" + source + "' | comby '" + template + "' -stdin -json-lines -match-only -matcher "+
-                (language == null ? ".java" : language)+
-                " 'foo'";
+    public static String getMatchCmd(String template, String source, String language, String rule) throws IOException {
+        String command;
+        if(rule !=null){
+            command = "echo '" + source + "' | comby '" + template + "' -rule " + "'" + rule + "'"
+                    + " -stdin -json-lines -match-only -matcher "+ (language == null ? ".java" : language)+
+                    " 'foo'";
+        }else {
+            command = "echo '" + source + "' | comby '" + template + "' -stdin -json-lines -match-only -matcher " +
+                    (language == null ? ".java" : language) +
+                    " 'foo'";
+        }
         String[] cmd = {
                 "/bin/sh",
                 "-c",
@@ -68,10 +73,10 @@ public class CombyUtils {
                 .filter(cm -> isPerfectMatch(source, cm)) : Optional.empty();
     }
 
-//    public static Optional<CombyMatch> getPerfectMatch(String template, String source, String language) {
-//        return getMatch(template, source, language)
-//                .filter(cm -> isPerfectMatch(source, cm));
-//    }
+    public static Optional<CombyMatch> getPerfectMatch(String template, String source, String language) {
+        return getMatch(template, source, language)
+                .filter(cm -> isPerfectMatch(source, cm));
+    }
 
     public static boolean isPerfectMatch(String source, CombyMatch cm) {
         return cm.getMatches().size() == 1
@@ -80,82 +85,78 @@ public class CombyUtils {
 
     }
 
+//
+//    public static boolean isPerfectMatch(String source, Match cm) {
+//        return cm.getMatched().equals(source.replace("\\\"", "\""));
+//    }
 
-    public static boolean isPerfectMatch(String source, Match cm) {
-        return cm.getMatched().equals(source.replace("\\\"", "\""));
-    }
+//    public static Tuple2<String, Map<String, String>>  renameTemplateVariable(String template, Function<String, String> rename){
+//        List<Tuple2<String, Environment>> allMatches = matchTemplateVariables(template)
+//                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+//                        .map(z -> Tuple.of(y.getMatched(), z))))
+//                .collect(toList());
+//        int n = allMatches.size();
+//        Map<String, String> renames = new HashMap<>();
+//        for(int i = 0; i < n; i++){
+//
+//            Tuple2<String, Environment> t = allMatches.get(i);
+//            Environment env = t._2();
+//
+//            String value;
+//            if (env.getValue().startsWith("[")) value = env.getValue().substring(1, env.getValue().length() - 1);
+//            else if(env.getValue().contains("~")) value = env.getValue().substring(0, env.getValue().indexOf("~"));
+//            else value = env.getValue();
+//
+//            renames.put(value, rename.apply(value));
+//            String renamedTemplateVar = t._1().replace(value, renames.get(value));
+//            template = template.replace(t._1(), renamedTemplateVar);
+//            allMatches = matchTemplateVariables(template)
+//                    .stream().flatMap(z -> z.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+//                            .map(v -> Tuple.of(y.getMatched(), v))))
+//                    .collect(toList());
+//        }
+//        return Tuple.of(template, renames);
+//
+//    }
 
-    public static Tuple2<String, Map<String, String>>  renameTemplateVariable(String template, Function<String, String> rename){
-        List<Tuple2<String, Environment>> allMatches = matchTemplateVariables(template)
-                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                        .map(z -> Tuple.of(y.getMatched(), z))))
-                .collect(toList());
-        int n = allMatches.size();
-        Map<String, String> renames = new HashMap<>();
-        for(int i = 0; i < n; i++){
+//    public static String  renameTemplateVariable(String template, Map<String, String> renames){
+//
+//        if(renames.size() == 0)
+//            return template;
+//
+//        renames = renames.entrySet().stream().filter(x->!x.getKey().equals(x.getValue()))
+//                .collect(toMap(x->x.getKey(), x->x.getValue()));
+//
+//        List<Tuple2<String, Environment>> allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
+//                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+//                        .map(z -> Tuple.of(y.getMatched().replace("\\\\","\\"), z))))
+//                .collect(toList());
+//        int n = allMatches.size();
+//
+//        for(int i = 0; i < n; i++){
+//            Tuple2<String, Environment> t = allMatches.get(i);
+//            Environment x = t._2();
+//            String value;
+//            if (x.getValue().startsWith("[")) value = x.getValue().substring(1, x.getValue().length() - 1);
+//            else if(x.getValue().contains("~")) value = x.getValue().substring(0, x.getValue().indexOf("~"));
+//            else value = x.getValue();
+//            if(renames.containsKey(value)){
+//                String renamedTemplateVar = t._1().replace(value, renames.get(value));
+//                template = template.replace(t._1(), renamedTemplateVar);
+//            }
+//            allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
+//                    .stream().flatMap(z -> z.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+//                            .map(v -> Tuple.of(y.getMatched().replace("\\\\","\\"), v))))
+//                    .collect(toList());
+//        }
+//        return template;
+//
+//    }
 
-            Tuple2<String, Environment> t = allMatches.get(i);
-            Environment env = t._2();
-
-            String value;
-            if (env.getValue().startsWith("[")) value = env.getValue().substring(1, env.getValue().length() - 1);
-            else if(env.getValue().contains("~")) value = env.getValue().substring(0, env.getValue().indexOf("~"));
-            else value = env.getValue();
-
-            renames.put(value, rename.apply(value));
-            String renamedTemplateVar = t._1().replace(value, renames.get(value));
-            template = template.replace(t._1(), renamedTemplateVar);
-            allMatches = matchTemplateVariables(template)
-                    .stream().flatMap(z -> z.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                            .map(v -> Tuple.of(y.getMatched(), v))))
-                    .collect(toList());
-        }
-        return Tuple.of(template, renames);
-
-    }
-
-
-
-
-
-    public static String  renameTemplateVariable(String template, Map<String, String> renames){
-
-        if(renames.size() == 0)
-            return template;
-
-        renames = renames.entrySet().stream().filter(x->!x.getKey().equals(x.getValue()))
-                .collect(toMap(x->x.getKey(), x->x.getValue()));
-
-        List<Tuple2<String, Environment>> allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
-                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                        .map(z -> Tuple.of(y.getMatched().replace("\\\\","\\"), z))))
-                .collect(toList());
-        int n = allMatches.size();
-
-        for(int i = 0; i < n; i++){
-            Tuple2<String, Environment> t = allMatches.get(i);
-            Environment x = t._2();
-            String value;
-            if (x.getValue().startsWith("[")) value = x.getValue().substring(1, x.getValue().length() - 1);
-            else if(x.getValue().contains("~")) value = x.getValue().substring(0, x.getValue().indexOf("~"));
-            else value = x.getValue();
-            if(renames.containsKey(value)){
-                String renamedTemplateVar = t._1().replace(value, renames.get(value));
-                template = template.replace(t._1(), renamedTemplateVar);
-            }
-            allMatches = CombyUtils.getMatch(":[:[var]]", template, null)
-                    .stream().flatMap(z -> z.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                            .map(v -> Tuple.of(y.getMatched().replace("\\\\","\\"), v))))
-                    .collect(toList());
-        }
-        return template;
-
-    }
-
-    public static Optional<CombyMatch> matchTemplateVariables(String template) {
-        return STOCK_TVs.containsKey(template) ? STOCK_TVs.get(template) :
-                CombyUtils.getMatch(":[:[var]]", template, null);
-    }
+//    public static Optional<CombyMatch> matchTemplateVariables(String template) {
+//        return STOCK_TVs.containsKey(template) ? STOCK_TVs.get(template) :
+//                CombyUtils.getMatch(":[:[var]]", template, null);
+//    }
 
     public static Optional<CombyRewrite> rewrite(String matcher, String rewrite, String source) {
         try {
@@ -167,7 +168,6 @@ public class CombyUtils {
                     "-c",
                     command
             };
-//            System.out.println("REWRITE        "  + matcher + "       " + rewrite + "          " + source);
             Process p = Runtime.getRuntime().exec(cmd);
             String result = new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
             CombyRewrite cr = new Gson().fromJson(result, CombyRewrite.class);
@@ -195,13 +195,8 @@ public class CombyUtils {
                     "-c",
                     command
             };
-//            System.out.println("SUBSTITUTE        "  + template + substitutions.entrySet().stream().map(Tuple::fromEntry)
-//                    .map(Tuple2::toString)
-//                    .collect(joining(",")));
-
             Process p = Runtime.getRuntime().exec(cmd);
             String result = new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
-//            CombyRewrite cr = new Gson().subsfromJson(result, CombyRewrite.class);
             return result;
         } catch (IOException e) {
             e.printStackTrace();
@@ -218,6 +213,21 @@ public class CombyUtils {
             }
         }
         return stmtAftr.replace("\n","");
+    }
+
+    public static List<String> getAllTemplateVariableName(String template){
+
+        return getMatch(":[:[var]]", template, null)
+                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
+                        .map(z -> Tuple.of(y.getMatched().replace("\\\\", "\\"), z))))
+                .map(t -> {
+                    Environment x = t._2();
+                    if (x.getValue().startsWith("[")) return x.getValue().substring(1, x.getValue().length() - 1);
+                    else if (x.getValue().contains("~")) return x.getValue().substring(0, x.getValue().indexOf("~"));
+                    else return x.getValue();
+                })
+                .collect(toList());
+
     }
 
 //    public static boolean isDecomposable(String template) {

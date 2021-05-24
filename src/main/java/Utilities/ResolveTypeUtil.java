@@ -48,7 +48,7 @@ public class ResolveTypeUtil {
     private static Map<String, String> getTypeNames(Map<String, String> unMatched, String template){
         return unMatched.entrySet().stream()
                 .filter(x -> template.contains(x.getValue()))
-                .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]", s -> true), x.getValue(), null).isPresent())
+                .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 

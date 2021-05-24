@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import static java.util.Map.Entry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static type.change.treeCompare.PerfectMatch.renamedInstance;
 
 public class MatchReplace {
 
@@ -214,13 +215,21 @@ public class MatchReplace {
         if(b4.isPresent()){
             Tuple2<String, String> finalB = b4.get();
             Tuple2<String, String> finalAftr = aftr.get();
-            Tuple2<String, Map<String, String>> newTemplate_renamesB4 = CombyUtils.renameTemplateVariable(child.getMatchReplace()._1(), x -> finalB._1() + "x" + x)
-                    .map1(x -> parent.getUnMatchedBefore().get(finalB._1()).replace("\\\"", "\"").replace(child.getCodeSnippetB4(), x));
-            Tuple2<String, Map<String, String>> newTemplate_renamesAfter = CombyUtils.renameTemplateVariable(child.getMatchReplace()._2(), x -> finalAftr._1() + "x" + x)
-                    .map1(x -> parent.getUnMatchedAfter().get(finalAftr._1()).replace("\\\"", "\"").replace(child.getCodeSnippetAfter(), x));
 
-            String mergedB4 = parent.getMatchReplace()._1().replace("\\\"", "\"").replace(b4.get()._2(), newTemplate_renamesB4._1());
-            String mergedAfter = parent.getMatchReplace()._2().replace("\\\"", "\"").replace(aftr.get()._2(), newTemplate_renamesAfter._1());
+            Map<String, String> renamesB4 = child.Match.getTemplateVariableMapping()
+                    .keySet().stream().collect(toMap(x -> x, x -> finalB._1() + "x" + x));
+            String newTemplateB4 = renamedInstance(renamesB4, child.Match).getTemplate();
+            newTemplateB4 = parent.getUnMatchedBefore().get(finalB._1()).replace("\\\"", "\"")
+                    .replace(child.getCodeSnippetB4(), newTemplateB4);
+
+            Map<String, String> renamesAfter = child.Replace.getTemplateVariableMapping()
+                    .keySet().stream().collect(toMap(x -> x, x -> finalAftr._1() + "x" + x));
+            String newTemplateAfter = renamedInstance(renamesAfter, child.Replace).getTemplate();
+            newTemplateAfter = parent.getUnMatchedAfter().get(finalAftr._1()).replace("\\\"", "\"")
+                    .replace(child.getCodeSnippetAfter(), newTemplateAfter);
+
+            String mergedB4 = parent.getMatchReplace()._1().replace("\\\"", "\"").replace(b4.get()._2(), newTemplateB4);
+            String mergedAfter = parent.getMatchReplace()._2().replace("\\\"", "\"").replace(aftr.get()._2(), newTemplateAfter);
 
             if (mergedB4.equals(parent.getMatchReplace()._1().replace("\\\"", "\""))
                     && mergedAfter.equals(parent.getMatchReplace()._2().replace("\\\"", "\"")))

@@ -77,6 +77,10 @@ public class Update {
         se.ifPresent(update -> this.subUpdates.add(update));
     }
 
+    public void addAllSubExplanation(List<Update> se){
+        this.subUpdates.addAll(se);
+    }
+
     public void setSubUpdates(List<Update> subUpdates) {
         this.subUpdates = new ArrayList<>(subUpdates);
     }

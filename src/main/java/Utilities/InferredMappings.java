@@ -5,21 +5,17 @@ import Utilities.comby.Environment;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import org.refactoringminer.RMinerUtils;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.Update;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.DoubleAdder;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
 import static Utilities.ResolveTypeUtil.resolveTypeNames;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
-import static org.refactoringminer.RMinerUtils.*;
+import static org.refactoringminer.RMinerUtils.TypeChange;
 
 public class InferredMappings {
 
@@ -39,15 +35,6 @@ public class InferredMappings {
         noTv = !Match.contains(":[");
     }
 
-    public InferredMappings(String beforeTypeTemplate, String afterTypeTemplate, String match, String replace, Instance instance) {
-        BeforeTypeTemplate = beforeTypeTemplate;
-        AfterTypeTemplate = afterTypeTemplate;
-        Match = match;
-        Replace = replace;
-        Instance = instance;
-        noTv = !Match.contains(":[");
-    }
-
     public String getMatch() {
         return Match;
     }
@@ -58,31 +45,6 @@ public class InferredMappings {
 
     public Instance getInstances() {
         return Instance;
-    }
-
-//    public void isUsageMapping() {
-//        List<Tuple2<Instance, String>> xs = getInstances().stream().flatMap(x -> isInstanceAnUsage(x).map(u -> Tuple.of(x, u)).stream())
-//                .collect(toList());
-//        if ((double) xs.size() / getInstances().size() >= 0.5) {
-//            capturesUsage = (xs.get(0)._2());
-//        }
-//    }
-
-    public Optional<String> isInstanceAnUsage(Instance i) {
-        String matcher = getMatch().replace("\\\"", "\"");
-        if (matcher.equals(i.getBefore())) return Optional.empty();
-        CombyMatch cm_m = CombyUtils.getMatch(matcher, i.getBefore(), null).orElseThrow(() -> new RuntimeException(i.getBefore() + "     " + matcher));
-        Optional<Environment> tv_b4 = cm_m.getMatches().get(0).getEnvironment().stream().filter(e -> e.getValue().equals(i.getNames()._1()))
-                .findFirst();
-        if (tv_b4.isPresent()) {
-            CombyMatch cm_r = CombyUtils.getMatch(getReplace(), i.getAfter(), null).get();
-            Optional<Environment> tv_After = cm_r.getMatches().get(0).getEnvironment().stream().filter(e -> e.getValue().equals(i.getNames()._1())
-                    || e.getValue().equals(i.getNames()._2())).findFirst();
-            if (tv_After.isPresent() && tv_b4.get().getVariable().equals(tv_After.get().getVariable())) {
-                return Optional.ofNullable(tv_b4.get().getVariable());
-            }
-        }
-        return Optional.empty();
     }
 
     public boolean isNoTv() {
@@ -141,7 +103,7 @@ public class InferredMappings {
         private List<String> relevantImports(TypeChange tc, MatchReplace expl) {
             Map<String, String> classNamesReferredAfter = expl.getUnMatchedAfter()
                     .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
-                    .filter(x -> CombyUtils.getPerfectMatch(Tuple.of(":[c~\\w+[?:\\.\\w+]+]",s->true), x.getValue(), null).isPresent())
+                    .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
@@ -152,17 +114,12 @@ public class InferredMappings {
                     .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
 
             Map<String, String> resolvedTypeNames = resolveTypeNames(classNamesReferredAfter, relevantImportsAfter);
-//            Map<String, String> c2 = classNamesReferredAfter.entrySet().stream()
-//                    .flatMap(x -> relevantImportsAfter.getOrDefault(true, new ArrayList<>()).stream()
-//                            .filter(y -> y.endsWith("." + x.getValue())).findFirst().stream().map(y -> Tuple.of(x.getKey(), y)))
-//                    .collect(toMap(x -> x._1(), x -> x._2()));
-
             return new ArrayList<>(resolvedTypeNames.values());
 
         }
 
         private boolean isReturnExpression(String originalComplete, String codeSnippet) {
-            Optional<Utilities.comby.Match> cm = CombyUtils.getPerfectMatch(CaptureMappingsLike.PATTERNS_HEURISTICS.get("ReturnStmt"),
+            Optional<Utilities.comby.Match> cm = CombyUtils.getPerfectMatch("return :[e]",
                     originalComplete.replace(";",""), null)
                     .map(x -> x.getMatches().get(0));
             return cm.map(match -> match.getEnvironment().stream().anyMatch(x -> x.getVariable().equals("r")
@@ -171,9 +128,10 @@ public class InferredMappings {
         }
 
         private boolean varOnLHS(String tciVarName, String codeSnippet, String source){
-            Optional<Utilities.comby.Match> cm = CaptureMappingsLike.PATTERNS_HEURISTICS.entrySet().stream()
-                    .filter(x -> x.getKey().contains("Assignment"))
-                    .flatMap(x -> CombyUtils.getPerfectMatch(x.getValue(), source, null).stream())
+            Optional<Utilities.comby.Match> cm =
+                    Stream.of(":[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]", ":[mod:e] :[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
+                            ":[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]")
+                    .flatMap(x -> CombyUtils.getPerfectMatch(x, source, null).stream())
                     .findFirst().map(x -> x.getMatches().get(0));
 
             if(cm.isPresent()){

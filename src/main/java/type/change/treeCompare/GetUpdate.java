@@ -3,23 +3,28 @@ package type.change.treeCompare;
 import Utilities.ASTUtils;
 import Utilities.CombyUtils;
 import Utilities.comby.Environment;
-import Utilities.comby.Match;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.control.Try;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Expression;
 import org.refactoringminer.RMinerUtils.TypeChange;
 
 import java.util.*;
+import java.util.function.IntFunction;
+import java.util.function.ToIntBiFunction;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
-import static Utilities.CombyUtils.*;
 import static com.google.common.collect.Streams.zip;
+import static java.util.Collections.reverseOrder;
+import static java.util.Comparator.comparingInt;
+import static java.util.Map.*;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static type.change.treeCompare.MatchReplace.mergeParentChildMatchReplace;
@@ -55,13 +60,12 @@ public class GetUpdate {
                 return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
             }
         }
-
+        
         Optional<MatchReplace> explanation = before instanceof Expression && after instanceof Expression ?
                 getInstance(before.toString(), after.toString(), Tuple.of(root1.getPos(), root1.getEndPos())
-                            , Tuple.of(root2.getPos(), root2.getEndPos()))
+                            , Tuple.of(root2.getPos(), root2.getEndPos()), before, after)
                 : Optional.empty();
-
-        Update upd = new Update(root1, root2, before.toString(), after.toString(),explanation, codeMapping, typeChange);
+        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation, codeMapping, typeChange);
 
         if (root1.hasSameType(root2))
             zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
@@ -69,17 +73,16 @@ public class GetUpdate {
                     getCoveringNode(before, t._1()).flatMap(x -> getCoveringNode(after, t._2()).map(y -> Tuple.of(x, y)))
                             .ifPresent(x -> upd.addSubExplanation(getUpdate(x._1(), x._2(), t._1(), t._2())));
             });
-        else{
-            if(upd.getExplanation().isPresent()){
+        else {
+            if(explanation.isPresent()) {
                 Map<String, String> unMappedTVB4 = explanation.get().getUnMatchedBefore().entrySet().stream()
-                        .filter(x -> !x.getKey().endsWith("c")).collect(toMap(Map.Entry::getKey, x-> x.getValue()));
+                        .filter(x -> !x.getKey().endsWith("c")).collect(toMap(Entry::getKey, x-> x.getValue()));
                 Map<String, String> unMappedTVAfter = explanation.get().getUnMatchedAfter().entrySet().stream()
-                        .filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), x-> x.getValue()));
-                Optional<Update> subUpdate = tryToMatchTheUnMatched(before, after, explanation.get(), unMappedTVB4, unMappedTVAfter);
-                upd.addSubExplanation(subUpdate);
+                        .filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), Entry::getValue));
+                List<Update> subUpdate = tryToMatchTheUnMatched(before, after, explanation.get(), unMappedTVB4, unMappedTVAfter);
+                upd.addAllSubExplanation(subUpdate);
             }
         }
-
         if(explanation.isEmpty())
             return Optional.of(upd);
 
@@ -118,21 +121,42 @@ public class GetUpdate {
         return allUpdates.stream().filter(x -> !subsumedEdits.contains(x)).collect(toList());
     }
 
-    public Optional<Update> tryToMatchTheUnMatched(ASTNode before, ASTNode after, MatchReplace expl, Map<String, String> unMappedTVB4, Map<String, String> unMappedTVAfter) {
-        if(unMappedTVB4.size() == unMappedTVAfter.size() && unMappedTVB4.size() == 1){
-            Optional<ASTNode> n1 = getCoveringNode(before, expl.getUnMatchedBeforeRange()
-                    .get(unMappedTVB4.entrySet().iterator().next().getKey()));
-            Optional<ASTNode> n2 = getCoveringNode(after, expl.getUnMatchedAfterRange()
-                    .get(unMappedTVAfter.entrySet().iterator().next().getKey()));
-            if(n1.isPresent() && n2.isPresent()){
-                if(!n1.get().toString().equals(before.toString()) && !n2.get().toString().equals(after.toString()))
-                    return getUpdate(n1.get(), n2.get());
+    public List<Update> tryToMatchTheUnMatched(ASTNode before, ASTNode after, MatchReplace expl,
+                                                   Map<String, String> unMappedTVB4, Map<String, String> unMappedTVAfter) {
+
+        List<Tuple3<String, String, Update>> holeForEachPair = new ArrayList<>();
+        for(var ub: unMappedTVB4.entrySet()){
+            Optional<ASTNode> n1 = getCoveringNode(before, expl.getUnMatchedBeforeRange().get(ub.getKey()));
+            if (n1.isEmpty() || n1.get().toString().equals(before.toString())) continue;
+            for(var ua: unMappedTVAfter.entrySet()){
+                Optional<ASTNode> n2 = getCoveringNode(after, expl.getUnMatchedAfterRange().get(ua.getKey()));
+                if (n2.isEmpty() || n2.get().toString().equals(after.toString())) continue;
+                Optional<Update> upd = getUpdate(n1.get(), n2.get());
+                if(upd.isEmpty()) continue;
+                holeForEachPair.add(Tuple.of(ub.getKey(), ua.getKey(), upd.get()));
             }
-            else System.out.println(String.join("\n", "Could not find expr", before.toString(), after.toString()));
-        }else if (unMappedTVB4.size() != unMappedTVAfter.size() && unMappedTVB4.size() != 0) {
-            System.out.println(String.join("\n", "Ow! Too many unmatched vars", before.toString(), after.toString()));
         }
-        return Optional.empty();
+
+        ToIntFunction<Tuple3<String, String, Update>> fn = upd -> Stream.concat(Stream.of(upd._3()), getAllDescendants(upd._3()))
+                .filter(i -> i.getExplanation().isPresent())
+                .mapToInt(e -> e.getExplanation().get().getTemplateVariableDeclarations().size())
+                .sum();
+
+        holeForEachPair.sort(reverseOrder(comparingInt(fn)));
+
+        List<Update> result = new ArrayList<>();
+        Set<String> alreadyConsideredB4 = new HashSet<>();
+        Set<String> alreadyConsideredAfter = new HashSet<>();
+
+        for(var e: holeForEachPair){
+            if(alreadyConsideredB4.contains(e._1()) || alreadyConsideredAfter.contains(e._2()))
+                continue;
+            result.add(e._3());
+            alreadyConsideredB4.add(e._1());
+            alreadyConsideredAfter.add(e._2());
+        }
+
+        return result;
     }
 
     public Optional<Update> getUpdate(ASTNode before, ASTNode after) {
@@ -142,19 +166,19 @@ public class GetUpdate {
     }
 
     public Optional<MatchReplace> getInstance(String before, String after, Tuple2<Integer, Integer> loc_b4,
-                                           Tuple2<Integer, Integer> loc_aftr) {
+                                           Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode) {
 
         Optional<PerfectMatch> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
-                : PerfectMatch.getMatch(before);
+                : PerfectMatch.getMatch(beforeNode);
         matchesB4.put(loc_b4, explanationBefore);
         if (explanationBefore.isEmpty()) return Optional.empty();
 
         Optional<PerfectMatch> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
-                : PerfectMatch.getMatch(after);
+                : PerfectMatch.getMatch(afterNode);
         matchesAfter.put(loc_aftr, explanationAfter);
 
         if (explanationAfter.isEmpty() || (explanationBefore.get().getName().equals(explanationAfter.get().getName())
-                && Stream.of("Identifier", "ClassName","StringLiteral").anyMatch(x -> explanationAfter.get().getName().equals(x))))
+                && Stream.of(":[[id]]", ":[a~\\\".*\\\"]").anyMatch(x -> explanationAfter.get().getName().equals(x))))
             return Optional.empty();
 
 
@@ -170,21 +194,6 @@ public class GetUpdate {
     pattern: 1= pattern name, 2= pattern with holes
      */
 
-
-    public static List<String> getAllTemplateVariableName(String template){
-
-        return CombyUtils.getMatch(":[:[var]]", template, null)
-                .stream().flatMap(x -> x.getMatches().stream().flatMap(y -> y.getEnvironment().stream()
-                        .map(z -> Tuple.of(y.getMatched().replace("\\\\", "\\"), z))))
-                .map(t -> {
-                    Environment x = t._2();
-                    if (x.getValue().startsWith("[")) return x.getValue().substring(1, x.getValue().length() - 1);
-                    else if (x.getValue().contains("~")) return x.getValue().substring(0, x.getValue().indexOf("~"));
-                    else return x.getValue();
-                })
-                .collect(toList());
-
-    }
 
 }
 

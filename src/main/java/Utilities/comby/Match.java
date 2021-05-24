@@ -1,6 +1,7 @@
 
 package Utilities.comby;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Generated;
@@ -52,6 +53,21 @@ public class Match {
 
     public void setMatched(String matched) {
         this.matched = matched;
+    }
+
+    public static Match renamedInstance(Match m1, Map<String, String> renames){
+        Match res = new Match();
+        res.setMatched(m1.getMatched());
+        res.setRange(m1.getRange());
+        List<Environment> newEnv = new ArrayList<>();
+        for(var e: m1.getEnvironment()){
+            Environment e_new = new Environment();
+            e_new.setVariable(renames.containsKey(e.getVariable()) ? renames.get(e.getVariable()) : e.getVariable());
+            e_new.setValue(e.getValue());
+            newEnv.add(e_new);
+        }
+        res.setEnvironment(newEnv);
+        return res;
     }
 
 }
