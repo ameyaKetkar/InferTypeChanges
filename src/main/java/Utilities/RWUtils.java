@@ -16,16 +16,6 @@ import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
 public class RWUtils {
 
-    public static Map<String, Class> kindMapping = new HashMap<>() {{
-        put("InferredMappings", InferredMappings.class);
-        put("CapturePatterns", CapturePatterns.class);
-    }};
-
-    public static <T> T toJson(String jsonData, String kind) {
-        Gson gson = new Gson();
-        Object result = gson.fromJson(jsonData, kindMapping.get(kind));
-        return (T) result;
-    }
 
     public static String escapeMetaCharacters(String inputString){
         final String[] metaCharacters = {"\\","^","$","{","}","[","]","(",")",".","*","+","?","|","<",">","-","&","%"};

@@ -9,6 +9,7 @@ import Utilities.comby.Range__1;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import org.eclipse.jdt.core.dom.ASTNode;
+import type.change.T2RLearnerException;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -85,14 +86,11 @@ public class PerfectMatch {
     }
 
 
-    public PerfectMatch updateTemplate(String newTemplate){
-        Optional<PerfectMatch> perfectMatch = getPerfectMatch(newTemplate, CodeSnippet, null)
+    public PerfectMatch updateTemplate(String newTemplate) throws T2RLearnerException {
+        return getPerfectMatch(newTemplate, CodeSnippet, null)
                 .or(() -> getPerfectMatch(newTemplate, CodeSnippet, ".xml"))
-                .map(x -> new PerfectMatch(Name, newTemplate, x));
-        if(perfectMatch.isEmpty())
-            System.out.println();
-        return perfectMatch.get();
-
+                .map(x -> new PerfectMatch(Name, newTemplate, x))
+                .orElseThrow(() -> new T2RLearnerException("Could not Update template. " + newTemplate + " did not perfectly match" + CodeSnippet));
     }
 
 

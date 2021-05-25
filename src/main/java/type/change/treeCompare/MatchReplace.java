@@ -8,6 +8,7 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
+import type.change.T2RLearnerException;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -27,7 +28,7 @@ public class MatchReplace {
     private final Map<String, Range__1> UnMatchedAfterRange;
     private final Map<String, Range__1> UnMatchedBeforeRange;
 
-    public MatchReplace(PerfectMatch before, PerfectMatch after) {
+    public MatchReplace(PerfectMatch before, PerfectMatch after) throws T2RLearnerException {
         Map<String, String> intersectingTemplateVars = getIntersection(before, after);
         Tuple2<PerfectMatch, PerfectMatch> sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
         before = sf._1; after = sf._2();

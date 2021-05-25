@@ -178,7 +178,9 @@ public class GetUpdate {
                 && Stream.of(":[[id]]", ":[a~\\\".*\\\"]").anyMatch(x -> explanationAfter.get().getName().equals(x))))
             return Optional.empty();
 
-        return Optional.of(new MatchReplace(explanationBefore.get(), explanationAfter.get()));
+        return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get()))
+                .onFailure(e -> System.out.println(e.toString()))
+                .toJavaOptional();
     }
 
 }
