@@ -7,22 +7,19 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChang
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Either;
-import journal.io.api.Journal;
-import journal.io.api.JournalBuilder;
 import logging.MyLogger;
-import org.refactoringminer.RMinerUtils;
 import org.refactoringminer.RMinerUtils.Response;
 import org.refactoringminer.RMinerUtils.TypeChange;
 import type.change.treeCompare.GetUpdate;
 import type.change.treeCompare.Update;
 import type.change.visitors.NodeCounter;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -57,15 +54,19 @@ public class Infer {
                 .map(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile))
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
+
     }
 
 
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        return CompletableFuture.supplyAsync(() -> Either.right(HttpUtils.makeHttpRequest(getRequestFor(repoName, repoClonURL, commit)))
+        if(!commit.startsWith("29bcb44528a2bf2d1ac7aa7715f38f5164e498aa"))
+            return CompletableFuture.completedFuture(null);
+
+        return CompletableFuture.supplyAsync(() -> Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoClonURL, commit)))
                 .filterOrElse(Optional::isPresent, x-> "REFACTORING MINER RESPONSE IS EMPTY !!!!! ").map(Optional::get))
-                .thenApply(response -> response.map(x -> new Gson().fromJson(response.get(), Response.class)))
-                .thenApply(responses -> responses.filterOrElse(r -> r != null && r.commits != null,r -> "REFACTORING MINER RESPONSE IS EMPTY !!!!! "))
+                .thenApply(response -> response.map(x -> new Gson().fromJson(response.get(), Response.class))
+                        .filterOrElse(r -> r != null && r.commits != null,r -> "REFACTORING MINER RESPONSE IS EMPTY !!!!! "))
                 .thenApply(response -> response.map(r -> r.commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList())))
                 .thenApply(x -> x.filterOrElse(z -> z.size() > 0, z ->"REFACTORING MINER RESPONSE IS EMPTY !!!!! "))
                 .thenCompose(allRefactorings -> {
@@ -93,6 +94,7 @@ public class Infer {
                             return Stream.empty();
                         }
                         return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+//                                .filter(x -> x.getB4().contains("DefaultFileSystem"))
                                 .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                                         .thenApply(ls -> ls.stream().map(a -> new Gson()
                                                 .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
@@ -103,11 +105,6 @@ public class Infer {
 
                     return CompletableFuture.allOf(xx);
                 });
-
-    }
-
-    private static Map<String, String> getRequestFor(String repoName, String repoClonURL, String commit) {
-        return Map.of("purpose", "RMiner", "commit", commit, "project", repoName, "url", repoClonURL);
     }
 
     public static List<CodeMapping> getAsCodeMapping(String url, TypeChange tc, String commit) {
@@ -157,15 +154,17 @@ public class Infer {
         }
         System.out.println("Analyzing : " + commit);
         System.out.println(String.join("\n->\n", stmtB4, stmtAftr));
+
         GetUpdate gu = new GetUpdate(codeMapping, typeChange);
-        Optional<Update> upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
-        if (upd.isEmpty()) {
+        Update upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
+
+        if (upd == null) {
             LOGGER.info("NO UPDATE FOUND!!!");
             return explainableUpdates;
         }
 
-        explainableUpdates = Stream.concat(Stream.of(upd.get()), getAllDescendants(upd.get()))
-                .filter(i -> i.getExplanation().isPresent())
+        explainableUpdates = Stream.concat(Stream.of(upd), getAllDescendants(upd))
+                .filter(i -> i.getExplanation().isPresent() && i.getAsInstance().isRelevant())
                 .collect(toList());
 
         if (explainableUpdates.isEmpty())

@@ -5,10 +5,12 @@ import Utilities.InferredMappings.Instance;
 import com.github.gumtreediff.tree.Tree;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import Utilities.comby.CombyRewrite;
-import org.refactoringminer.RMinerUtils;
 import org.refactoringminer.RMinerUtils.TypeChange;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public class Update {
@@ -17,44 +19,34 @@ public class Update {
     private final Tree after;
     private final String beforeStr;
     private final String afterStr;
-    private Optional<MatchReplace> explanation;
-    private List<Update> subUpdates;
-    private final Instance project_commit_cu_los;
-//    private boolean isRelevant;
+    private MatchReplace explanation;
+    private final List<Update> subUpdates;
+    private Instance project_commit_cu_los;
 
-    public Update(Tree before, Tree after, String beforeStr, String afterStr, Optional<MatchReplace> explanation, CodeMapping codeMapping, TypeChange typeChange) {
+    public Update(Tree before, Tree after, String beforeStr, String afterStr, MatchReplace explanation, CodeMapping codeMapping, TypeChange typeChange) {
         this.before = before;
         this.after = after;
         this.beforeStr = beforeStr;
         this.afterStr = afterStr;
         this.subUpdates = new ArrayList<>();
         this.explanation = explanation;
-        this.project_commit_cu_los = new Instance(codeMapping, this, typeChange, explanation);
+        this.project_commit_cu_los = new Instance(codeMapping, this, typeChange);
     }
-
-    public static boolean isSamePosWise(Tree t1, Tree t2){
-        return t1.getPos() == t2.getPos() && t1.getEndPos() == t2.getEndPos();
-    }
-
 
     public Optional<String> applyUpdate(String source){
-        if(explanation.isEmpty()) return Optional.empty();
-        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(explanation.get().getMatchReplace()._1(), explanation.get().getMatchReplace()._2(), source);
+        if(explanation == null) return Optional.empty();
+        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(explanation.getMatchReplace()._1(), explanation.getMatchReplace()._2(), source);
         return rewrite.map(CombyRewrite::getRewrittenSource);
     }
 
     public Optional<String> applyCutPaste(String source){
-        if(explanation.isEmpty()) return Optional.empty();
+        if(explanation == null) return Optional.empty();
         if(source.contains(getBeforeStr())) return Optional.of(source.replace(getBeforeStr(), getAfterStr()));
         return Optional.empty();
     }
 
     public static Stream<Update> getAllDescendants(Update u){
         return u.getSubUpdates().stream().flatMap(x -> Stream.concat(Stream.of(x), getAllDescendants(x)));
-    }
-
-    public boolean isIsomorphic(){
-        return before.isIsomorphicTo(after);
     }
 
     public boolean hasSameType() {
@@ -70,19 +62,16 @@ public class Update {
     }
 
     public Optional<MatchReplace> getExplanation() {
-        return explanation;
+        return Optional.ofNullable(explanation);
     }
 
-    public void addSubExplanation(Optional<Update> se){
-        se.ifPresent(update -> this.subUpdates.add(update));
+    public void addSubExplanation(Update u){
+        if(u != null)
+            this.subUpdates.add(u);
     }
 
     public void addAllSubExplanation(List<Update> se){
         this.subUpdates.addAll(se);
-    }
-
-    public void setSubUpdates(List<Update> subUpdates) {
-        this.subUpdates = new ArrayList<>(subUpdates);
     }
 
     public List<Update> getSubUpdates() {
@@ -119,12 +108,12 @@ public class Update {
         return false;
     }
 
-//    public boolean isRelevant() {
-//        return this.isRelevant;
-//    }
 
-    public void setExplanation(Optional<MatchReplace> e) {
+
+    public void setExplanation(MatchReplace e) {
         this.explanation = e;
-//        this.isRelevant = explanation instanceof Explanation && isRelevant((Explanation) explanation, getAsInstance());
+        if(e != null)
+            this.project_commit_cu_los.updateExplanation(this);
+        else this.project_commit_cu_los = null;
     }
 }

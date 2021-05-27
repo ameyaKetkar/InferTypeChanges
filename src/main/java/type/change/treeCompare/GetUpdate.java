@@ -30,8 +30,8 @@ import static type.change.treeCompare.Update.getAllDescendants;
 public class GetUpdate {
 
 
-    private Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesB4;
-    private Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesAfter;
+    private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesB4;
+    private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesAfter;
     private final CodeMapping codeMapping;
     private final TypeChange typeChange;
 
@@ -40,28 +40,27 @@ public class GetUpdate {
         this.typeChange = typeChange;
         matchesB4 = new HashMap<>();
         matchesAfter = new HashMap<>();
-
     }
 
     public boolean areEqualInText(Tree t1, Tree t2){
         return t1.getPos() == t2.getPos() && t1.getEndPos() == t2.getEndPos();
     }
 
-    public Optional<Update> getUpdate(ASTNode before, ASTNode after, Tree root1, Tree root2) {
+    public Update getUpdate(ASTNode before, ASTNode after, Tree root1, Tree root2) {
 
-        if (root1 == null || root2 == null) return Optional.empty();
+        if (root1 == null || root2 == null) return null;
 
-        if(root1.getChildren().size() == root2.getChildren().size() && root1.getChildren().size() == 1){
-            if(areEqualInText(root1, root1.getChild(0)) && areEqualInText(root2, root2.getChild(0))){
-                return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
-            }
+        if (root1.getChildren().size() == root2.getChildren().size()
+                && root1.getChildren().size() == 1 && areEqualInText(root1, root1.getChild(0))
+                && areEqualInText(root2, root2.getChild(0))) {
+            return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
         }
-        
-        Optional<MatchReplace> explanation = before instanceof Expression && after instanceof Expression ?
-                getInstance(Tuple.of(root1.getPos(), root1.getEndPos())
+
+        Optional<MatchReplace> explanation = before instanceof Expression && after instanceof Expression
+                ? getInstance(Tuple.of(root1.getPos(), root1.getEndPos())
                             , Tuple.of(root2.getPos(), root2.getEndPos()), before, after)
                 : Optional.empty();
-        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation, codeMapping, typeChange);
+        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation.orElse(null), codeMapping, typeChange);
 
         if (root1.hasSameType(root2))
             zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
@@ -80,30 +79,41 @@ public class GetUpdate {
             }
         }
         if(explanation.isEmpty())
-            return Optional.of(upd);
+            return upd;
 
         List<Update> simplestDescendants = removeSubsumedEdits(getAllDescendants(upd)
                 .filter(x -> x.getExplanation().isPresent())
                 .collect(toList()));
 
-        boolean thisUpdateAddsSomethingNew = applyUpdatesAndMatch(simplestDescendants, upd.getBeforeStr(), upd.getAfterStr());
-        if (thisUpdateAddsSomethingNew && !upd.getAsInstance().isRelevant())
-            upd.setExplanation(Optional.empty());
-        if(!thisUpdateAddsSomethingNew){
-            for(var child: simplestDescendants){
-                Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getExplanation().get(), child.getExplanation().get());
-                if(m.isPresent()){
-                    upd.setExplanation(m);
-                }else{
-                    child.setExplanation(Optional.empty());
-                }
+        boolean doesNotAddAnythingNew = applyUpdatesAndMatch(simplestDescendants, upd.getBeforeStr(), upd.getAfterStr());
+        if (doesNotAddAnythingNew) {
+            if (!upd.getAsInstance().isRelevant())
+                upd.setExplanation(null);
+            else if (simplestDescendants.stream().noneMatch(d -> d.getAsInstance().isRelevant()))
+                upd.setExplanation(null);
+            else if(simplestDescendants.size() == 1
+                    && upd.getExplanation().get().getMatch().getTemplate()
+                    .contains(simplestDescendants.get(0).getExplanation().get().getMatch().getTemplate())
+                    && upd.getExplanation().get().getReplace().getTemplate()
+                    .contains(simplestDescendants.get(0).getExplanation().get().getReplace().getTemplate())){
+                upd.setExplanation(null);
             }
-
+            else
+                mergeParentChildrenMatchReplace(upd, simplestDescendants);
         }
-        return Optional.of(upd);
+        else
+            mergeParentChildrenMatchReplace(upd, simplestDescendants);
+
+        return upd;
     }
 
-
+    private void mergeParentChildrenMatchReplace(Update upd, List<Update> simplestDescendants) {
+        for (var child : simplestDescendants) {
+            Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getExplanation().get(), child.getExplanation().get());
+            if (m.isPresent()) upd.setExplanation(m.get());
+            else child.setExplanation(null);
+        }
+    }
 
     public static List<Update> removeSubsumedEdits(Collection<Update> allUpdates) {
         List<Update> subsumedEdits = new ArrayList<>();
@@ -127,15 +137,15 @@ public class GetUpdate {
             for(var ua: unMappedTVAfter.entrySet()){
                 Optional<ASTNode> n2 = getCoveringNode(after, expl.getUnMatchedAfterRange().get(ua.getKey()));
                 if (n2.isEmpty() || n2.get().toString().equals(after.toString())) continue;
-                Optional<Update> upd = getUpdate(n1.get(), n2.get());
-                if(upd.isEmpty()) continue;
-                holeForEachPair.add(Tuple.of(ub.getKey(), ua.getKey(), upd.get()));
+                Update upd = getUpdate(n1.get(), n2.get());
+                if(upd == null) continue;
+                holeForEachPair.add(Tuple.of(ub.getKey(), ua.getKey(), upd));
             }
         }
 
         ToIntFunction<Tuple3<String, String, Update>> overlaps = upd -> Stream.concat(Stream.of(upd._3()), getAllDescendants(upd._3()))
                 .filter(i -> i.getExplanation().isPresent())
-                .mapToInt(e -> e.getExplanation().get().getTemplateVariableDeclarations().size())
+                .mapToInt(e -> e.getExplanation().get().getGeneralizations().size())
                 .sum();
 
         holeForEachPair.sort(reverseOrder(comparingInt(overlaps)));
@@ -155,7 +165,7 @@ public class GetUpdate {
         return result;
     }
 
-    public Optional<Update>  getUpdate(ASTNode before, ASTNode after) {
+    public Update  getUpdate(ASTNode before, ASTNode after) {
         Tree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
         Tree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
         return getUpdate(before, after, root1, root2);

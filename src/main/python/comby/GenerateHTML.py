@@ -36,8 +36,8 @@ def json_to_html(json_data):
 
 def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
     if forWhat == 'Statement Mappings':
-        colNames = ['Match', 'Replace', 'Instances', 'Relevant Instances', 'Commits', 'Project', 'Link']
-        col_types = '[\'string\',\'string\', \'number\', \'number\', \'number\',\'number\',\'string\']'
+        colNames = ['Match', 'Replace', 'Instances', 'isVeryGood','isGood','Relevant Instances', 'Commits', 'Project', 'Link']
+        col_types = '[\'string\',\'string\', \'number\', \'boolean\', \'boolean\', \'number\', \'number\',\'number\',\'string\']'
         Title = 'Mapping Summary for ' + str(typeChange)
         body = []
         for k, v1 in mappingSummary.items():
@@ -45,8 +45,8 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
 
         apply_template_to(htmlPage, (colNames, body, Title, col_types, "../.."))
     if forWhat == 'Type Change Summary':
-        colNames = ['Before Type', 'After Type', 'Mappings']
-        col_types = '[\'string\',\'string\', \'number\']'
+        colNames = ['Before Type', 'After Type','Very Good Mappings','Good Mappings', 'Mappings']
+        col_types = '[\'string\',\'string\', \'number\', \'number\', \'number\']'
         Title = 'TypeChange Summary'
         body = []
         for k, v1 in mappingSummary.items():
@@ -79,16 +79,25 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
         typeChangeFolder = os.path.join(res, "TypeChange" + str(typeChangeID))
         if not os.path.exists(typeChangeFolder):
             os.mkdir(typeChangeFolder)
+        veryGoodMappingCounter = 0
+        goodMappingCounter = 0
         for matchReplace, instances in mappings.items():
             print(i)
             mapping_id = 'Mapping-' + str(i)
             mapping_details = os.path.join(typeChangeFolder, mapping_id + ".html")
             mappingSummary[mapping_id] = {'Match': html.escape(matchReplace[0]), 'Replace': html.escape(matchReplace[1]),
                                           'Instances': len(instances),
-                                          'Relevant Instances': len([i for i in instances if i['isRelevant']]),
+                                          'Relevant Instances': len([i for i in instances if i['isRelevant'] != 'Not Relevant']),
                                           'Commits': len({inst['Commit'] for inst in instances}),
                                           'Project': len({inst['Project'] for inst in instances}),
                                           'Link': "<a href=" + mapping_details + ">Link</a>"}
+            mappingSummary[mapping_id]['isGood'] = any(i for i in instances if i['isRelevant']) and mappingSummary[mapping_id]['Commits'] > 1
+            mappingSummary[mapping_id]['isVeryGood'] = any(i for i in instances if i['isRelevant']) and mappingSummary[mapping_id]['Project'] > 1
+
+            if mappingSummary[mapping_id]['isVeryGood']:
+                veryGoodMappingCounter += 1
+            if mappingSummary[mapping_id]['isGood']:
+                goodMappingCounter += 1
             # html = json.loads([i for i in instances['Instance']])
             page = json_to_html([i for i in instances])
             with open(mapping_details, 'w+') as t:
@@ -102,6 +111,8 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
 
         typeChangeSummary[typeChangeID] = {'Before Type': html.escape(typeChange[0]),
                                            'After Type': html.escape(typeChange[1]),
+                                           'Good Mappings' : goodMappingCounter,
+                                           'Very Good Mappings': veryGoodMappingCounter,
                                            'Mappings': "<a href=" + mappingSummaryPath + ">" + str(
                                                len(mappings)) + "</a>"}
 

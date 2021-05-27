@@ -19,15 +19,6 @@ import static java.util.stream.Collectors.toMap;
 
 public class CaptureMappingsLike {
 
-
-    // "r" and "c" are special names
-    // "r" should be the left-most temnplate variable if it represents ANY expression
-    // template variables "c" are never considered for generalization
-    public static <U,V> Function<U, Optional<V>> checkAndThen(Predicate<U> test, Function<U, V> f){
-        return u -> test.test(u) ? Optional.ofNullable(f.apply(u)) : Optional.empty();
-    }
-
-
     public static String getTheUnBoundedTemplateVar(ASTNode n){
         if(n.getNodeType() == ASTNode.ASSIGNMENT)
             return ((Assignment)n).getRightHandSide().toString();

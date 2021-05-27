@@ -4,79 +4,102 @@ import Utilities.ASTUtils;
 import Utilities.CombyUtils;
 import Utilities.comby.Match;
 import Utilities.comby.Range__1;
+import com.google.common.collect.Iterables;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import type.change.T2RLearnerException;
 
 import java.util.*;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static java.util.Map.Entry;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static type.change.treeCompare.PerfectMatch.*;
 import static type.change.treeCompare.PerfectMatch.renamedInstance;
 
 public class MatchReplace {
 
     private final PerfectMatch Match;
     private final PerfectMatch Replace;
-    private final Map<String, String> TemplateVariableDeclarations;
+    private final Map<String, String> Generalizations;
     private final Map<String, String> UnMatchedBefore;
     private final Map<String, String> UnMatchedAfter;
     private final Map<String, Range__1> UnMatchedAfterRange;
     private final Map<String, Range__1> UnMatchedBeforeRange;
 
-    public MatchReplace(PerfectMatch before, PerfectMatch after) throws T2RLearnerException {
-        Map<String, String> intersectingTemplateVars = getIntersection(before, after);
-        Tuple2<PerfectMatch, PerfectMatch> sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
-        before = sf._1; after = sf._2();
-        intersectingTemplateVars = getIntersection(before, after);
-        Optional<Either<String, String>> wrapUnWrap = isWrapUnWrap(before, after);
+
+    public MatchReplace(PerfectMatch beforep, PerfectMatch afterp) throws T2RLearnerException {
+        Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> generalization = getGeneralization(beforep, afterp);
+        var generalizedMatchAfter = generalization._2();
+        var generalizedMatchBefore = generalization._1();
+
+        this.Generalizations = generalizedMatchBefore.getTemplateVariableMapping().entrySet()
+                .stream().filter(x -> !x.getKey().endsWith("c") && generalization._3().containsKey(x.getKey()))
+                .collect(toMap(Entry::getKey, Entry::getValue));
+        this.UnMatchedBefore = notInGeneralization(generalizedMatchBefore.getTemplateVariableMapping());
+        this.UnMatchedBeforeRange = UnMatchedBefore.keySet().stream()
+                .collect(toMap(x -> x, x -> generalizedMatchBefore.getTemplateVariableMappingRange().get(x)));
+        this.Match = specialize(generalizedMatchBefore, UnMatchedBefore);
+        this.UnMatchedAfter = notInGeneralization(generalizedMatchAfter.getTemplateVariableMapping());
+        this.UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
+                .collect(toMap(x -> x, x -> generalizedMatchAfter.getTemplateVariableMappingRange().get(x)));
+        this.Replace = specialize(generalizedMatchAfter, UnMatchedAfter);
+    }
+
+    private Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> getGeneralization(PerfectMatch beforep, PerfectMatch afterp) throws T2RLearnerException {
+        Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> generalization = generalize(beforep, afterp);
+
+        Optional<Either<String, String>> wrapUnWrap = isWrapUnWrap(generalization._1(), generalization._2());
+
         if(wrapUnWrap.isPresent()){
             if (wrapUnWrap.get().isLeft())
-                after = after.updateTemplate(":["+wrapUnWrap.get().getLeft()+"]");
+                generalization = generalization.update2(generalization._2().updateTemplate(":["+wrapUnWrap.get().getLeft()+"]"));
             else
-                before = before.updateTemplate(":["+wrapUnWrap.get().get()+"]");
-            intersectingTemplateVars = getIntersection(before, after);
-            sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
-            intersectingTemplateVars = getIntersection(before, after);
-            before = sf._1; after = sf._2();
+                generalization = generalization.update1(generalization._1().updateTemplate(":["+wrapUnWrap.get().get()+"]"));
+            generalization = generalize(generalization._1(), generalization._2());
         }
         else {
-            Optional<Either<String, String>> nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, null);
+            Optional<Either<String, String>> nxtDcmp = nextDecomposition(generalization._1(), generalization._2(), null);
             int i = 6;
             while (nxtDcmp.isPresent() && i >= 0) {
                 if (nxtDcmp.get().isLeft())
-                    before = before.decompose(nxtDcmp.get().getLeft()).orElse(before);
+                    generalization = generalization.update1(generalization._1().decompose(nxtDcmp.get().getLeft()).orElse(generalization._1()));
                 else
-                    after = after.decompose(nxtDcmp.get().get()).orElse(after);
-                intersectingTemplateVars = getIntersection(before, after);
-                sf = PerfectMatch.safeRename(before, after, intersectingTemplateVars);
-                intersectingTemplateVars = getIntersection(before, after);
-                before = sf._1; after = sf._2();
-                nxtDcmp = nextDecomposition(before, after, intersectingTemplateVars, nxtDcmp.get());
+                    generalization = generalization.update2(generalization._2().decompose(nxtDcmp.get().get()).orElse(generalization._2()));
+                generalization = generalize(generalization._1(), generalization._2());
+                nxtDcmp = nextDecomposition(generalization._1(), generalization._2(), nxtDcmp.get());
                 i -= 1;
             }
         }
-        Collection<String> finalIntersectingTemplateVars = intersectingTemplateVars.values();
-        PerfectMatch finalAfter = after, finalBefore = before;
-        this.TemplateVariableDeclarations = before.getTemplateVariableMapping().entrySet()
-                .stream().filter(x -> !x.getKey().endsWith("c") && finalIntersectingTemplateVars.contains(x.getKey()))
-                .collect(toMap(Entry::getKey, Entry::getValue));
-        this.UnMatchedBefore = notInTemplateVariableDeclarations(before.getTemplateVariableMapping());
-        this.UnMatchedBeforeRange = UnMatchedBefore.keySet().stream()
-                .collect(toMap(x -> x, x -> finalBefore.getTemplateVariableMappingRange().get(x)));
-        this.Match = before.updateTemplate(CombyUtils.substitute(before.getTemplate(), UnMatchedBefore));
-        this.UnMatchedAfter = notInTemplateVariableDeclarations(after.getTemplateVariableMapping());
-        this.UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
-                .collect(toMap(x -> x, x -> finalAfter.getTemplateVariableMappingRange().get(x)));
-        this.Replace = after.updateTemplate(CombyUtils.substitute(after.getTemplate(), UnMatchedAfter));
+
+        List<String> intersectingTemplateVars = new ArrayList<>(generalization._3().values());
+
+        /**
+         * Get "the variable" and name it so!
+         */
+
+
+        Map<String, String> normalizationRenames = IntStream.range(0, intersectingTemplateVars.size()).boxed()
+                .collect(toMap(intersectingTemplateVars::get, x -> "v" + x));
+
+        generalization._2().rename(normalizationRenames);
+        generalization._1().rename(normalizationRenames);
+        generalization = generalization.update3(getIntersection(generalization._1(), generalization._2()));
+        return generalization;
+    }
+
+    private PerfectMatch specialize(PerfectMatch match, Map<String, String> unMatched) throws T2RLearnerException {
+        return match.updateTemplate(CombyUtils.substitute(match.getTemplate(), unMatched));
     }
 
 
-    public Optional<Either<String, String>> nextDecomposition(PerfectMatch before, PerfectMatch after, Map<String, String> intersectingTemplateVars, Either<String, String> prev) {
+    public Optional<Either<String, String>> nextDecomposition(PerfectMatch before, PerfectMatch after, Either<String, String> prev) {
+        Map<String, String> intersectingTemplateVars = getIntersection(before, after);
         for (var eb : before.getTemplateVariableMapping().entrySet()) {
             if (eb.getKey().endsWith("c") || intersectingTemplateVars.containsKey(eb.getKey()) || eb.getValue().isEmpty())
                 continue;
@@ -128,31 +151,6 @@ public class MatchReplace {
 
     // Match template variables with the same value
     // Prefers matches with same key
-    public Map<String, String> getIntersection(PerfectMatch before, PerfectMatch after) {
-        Map<String, String> intersectingTemplateVars = new HashMap<>();
-
-        for (var entry_b4 : before.getTemplateVariableMapping().entrySet()) {
-            if (entry_b4.getKey().equals("c")) continue;
-            String matchedTemplateVar = "";
-            for (var entry_after : after.getTemplateVariableMapping().entrySet()) {
-                if (entry_after.getKey().equals("c")) continue;
-                if (entry_b4.getValue().replace("\\n", "")
-                        .equals(entry_after.getValue().replace("\\n", ""))) {
-                    if (matchedTemplateVar.isEmpty())
-                        matchedTemplateVar = entry_after.getKey();
-                    if (entry_b4.getKey().equals(entry_after.getKey())) {
-                        matchedTemplateVar = entry_after.getKey();
-                        break;
-                    }
-
-                }
-            }
-            if (!matchedTemplateVar.isEmpty())
-                intersectingTemplateVars.put(matchedTemplateVar, entry_b4.getKey());
-        }
-        return intersectingTemplateVars;
-    }
-
 
     public PerfectMatch getMatch() {
         return Match;
@@ -162,14 +160,14 @@ public class MatchReplace {
         return Replace;
     }
 
-    public Map<String, String> getTemplateVariableDeclarations() {
-        return TemplateVariableDeclarations;
+    public Map<String, String> getGeneralizations() {
+        return Generalizations;
     }
 
 
-    public Map<String, String> notInTemplateVariableDeclarations(Map<String, String> tmap) {
-        return tmap.entrySet().stream().filter(x -> !TemplateVariableDeclarations.containsKey(x.getKey())
-                && !TemplateVariableDeclarations.containsValue(x.getKey()))
+    public Map<String, String> notInGeneralization(Map<String, String> tmap) {
+        return tmap.entrySet().stream().filter(x -> !Generalizations.containsKey(x.getKey())
+                && !Generalizations.containsValue(x.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
 
     }

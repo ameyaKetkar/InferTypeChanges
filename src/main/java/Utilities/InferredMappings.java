@@ -1,7 +1,5 @@
 package Utilities;
 
-import Utilities.comby.CombyMatch;
-import Utilities.comby.Environment;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -70,13 +68,12 @@ public class InferredMappings {
         private final String CompilationUnit;
         private final Tuple2<String, String> LineNos;
         private final Tuple2<String, String> Names;
-        private final Map<String, String> TemplateVariableToCodeBefore;
+        private Map<String, String> TemplateVariableToCodeBefore;
         private final List<String> RelevantImports;
+        private Map<String, String> TemplateVariableToCodeAfter;
+        private String isRelevant;
 
-        private final Map<String, String> TemplateVariableToCodeAfter;
-        private final boolean isRelevant;
-
-        public Instance(CodeMapping cm, Update upd, TypeChange tc, Optional<MatchReplace> explanation){
+        public Instance(CodeMapping cm, Update upd, TypeChange tc){
             OriginalCompleteBefore = cm.getB4().replace("\n","");
             OriginalCompleteAfter = cm.getAfter().replace("\n","");
             Before = upd.getBeforeStr().replace("\n","");
@@ -86,23 +83,31 @@ public class InferredMappings {
             CompilationUnit = tc.getBeforeCu().right;
             LineNos = Tuple.of(extractLineNumber(cm.getUrlbB4()), extractLineNumber(cm.getUrlAftr()));
             Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
-            TemplateVariableToCodeBefore = upd.getExplanation().isPresent()
-                    ? upd.getExplanation().get().getMatch().getTemplateVariableMapping() : new HashMap<>();
-            TemplateVariableToCodeAfter = upd.getExplanation().isPresent()
-                    ? upd.getExplanation().get().getReplace().getTemplateVariableMapping() : new HashMap<>();
-            isRelevant = upd.getExplanation().isPresent()
-                    && ((TemplateVariableToCodeBefore.containsValue(Names._1()) && TemplateVariableToCodeAfter.containsValue(Names._1()))
-                    // Because the statements are normalized to renames
-                    || (varOnLHS(Names._1(), Before, OriginalCompleteBefore) &&
-                    (varOnLHS(Names._1(), After, OriginalCompleteAfter) || varOnLHS(Names._2(), After, OriginalCompleteAfter)))
-                    || (isReturnExpression(OriginalCompleteBefore, Before) && isReturnExpression(OriginalCompleteAfter, After)));
-            RelevantImports = explanation.isPresent() ? relevantImports(tc, explanation.get()) : new ArrayList<>();
+            TemplateVariableToCodeBefore = upd.getExplanation().map(e -> e.getMatch().getTemplateVariableMapping())
+                    .orElseGet(HashMap::new);
+            TemplateVariableToCodeAfter = upd.getExplanation().map(e -> e.getReplace().getTemplateVariableMapping())
+                    .orElseGet(HashMap::new);
+            isRelevant = isRelevant(upd);
+            RelevantImports = upd.getExplanation().map(matchReplace -> relevantImports(tc, matchReplace)).orElseGet(ArrayList::new);
 
         }
 
+        private String isRelevant(Update upd) {
+            if(upd.getExplanation().isPresent() && ((TemplateVariableToCodeBefore.containsValue(Names._1())
+                    && TemplateVariableToCodeAfter.containsValue(Names._1()))))
+                return "Uses";
+            if(varOnLHS(Names._1(), Before, OriginalCompleteBefore) &&
+                    (varOnLHS(Names._1(), After, OriginalCompleteAfter) || varOnLHS(Names._2(), After, OriginalCompleteAfter)))
+                return "AssignedTo";
+            if(isReturnExpression(OriginalCompleteBefore, Before) && isReturnExpression(OriginalCompleteAfter, After))
+                return "Returns";
+            return "Not Relevant";
+        }
+
+
         private List<String> relevantImports(TypeChange tc, MatchReplace expl) {
             Map<String, String> classNamesReferredAfter = expl.getUnMatchedAfter()
-                    .entrySet().stream().filter(x -> !expl.getTemplateVariableDeclarations().containsKey(x.getKey()))
+                    .entrySet().stream().filter(x -> !expl.getGeneralizations().containsKey(x.getKey()))
                     .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -119,18 +124,18 @@ public class InferredMappings {
         }
 
         private boolean isReturnExpression(String originalComplete, String codeSnippet) {
-            Optional<Utilities.comby.Match> cm = CombyUtils.getPerfectMatch("return :[e]",
-                    originalComplete.replace(";",""), null)
+            Optional<Utilities.comby.Match> cm = CombyUtils.getPerfectMatch("return :[r];", originalComplete, null)
                     .map(x -> x.getMatches().get(0));
             return cm.map(match -> match.getEnvironment().stream().anyMatch(x -> x.getVariable().equals("r")
-                        && x.getValue().replace("\\\"", "\"").equals(codeSnippet)))
+                        && x.getValue().equals(codeSnippet)))
                     .orElse(false);
         }
 
         private boolean varOnLHS(String tciVarName, String codeSnippet, String source){
             Optional<Utilities.comby.Match> cm =
-                    Stream.of(":[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]", ":[mod:e] :[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
-                            ":[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]")
+                    Stream.of(":[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];",
+                            ":[mod:e] :[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];",
+                            ":[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];")
                     .flatMap(x -> CombyUtils.getPerfectMatch(x, source, null).stream())
                     .findFirst().map(x -> x.getMatches().get(0));
 
@@ -138,7 +143,7 @@ public class InferredMappings {
                 boolean tciVarOnLHs = cm.get().getEnvironment().stream().anyMatch(x -> x.getVariable().equals("nm")
                         && (x.getValue().equals(tciVarName) || x.getValue().endsWith("." + tciVarName)));
                 boolean beforeOnRHS = cm.get().getEnvironment().stream().anyMatch(x -> x.getVariable().equals("r")
-                        && x.getValue().replace("\\\"", "\"").contains(codeSnippet));
+                        && x.getValue().replace("\\\"", "\"").equals(codeSnippet));
                 return tciVarOnLHs && beforeOnRHS;
             }
             return false;
@@ -191,13 +196,20 @@ public class InferredMappings {
             return TemplateVariableToCodeAfter;
         }
 
-
         public boolean isRelevant() {
-            return isRelevant;
+            return !isRelevant.equals("Not Relevant");
         }
 
         public List<String> getRelevantImports() {
             return RelevantImports;
+        }
+
+        public void updateExplanation(Update upd) {
+            TemplateVariableToCodeBefore = upd.getExplanation().map(e -> e.getMatch().getTemplateVariableMapping())
+                    .orElseGet(HashMap::new);
+            TemplateVariableToCodeAfter = upd.getExplanation().map(e -> e.getReplace().getTemplateVariableMapping())
+                    .orElseGet(HashMap::new);
+            isRelevant = isRelevant(upd);
         }
     }
 }

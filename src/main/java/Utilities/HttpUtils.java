@@ -32,4 +32,8 @@ public class HttpUtils {
         }
         return Optional.empty();
     }
+
+    public static Map<String, String> getRequestFor(String repoName, String repoClonURL, String commit) {
+        return Map.of("purpose", "RMiner", "commit", commit, "project", repoName, "url", repoClonURL);
+    }
 }
