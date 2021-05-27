@@ -36,7 +36,7 @@ public class ResolveTypeUtil {
         if (matchedTypeSyntax._1().isEmpty() || matchedTypeSyntax._2().isEmpty())
             return Optional.empty();
         try {
-            MatchReplace expl = new MatchReplace(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get());
+            MatchReplace expl = new MatchReplace(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get(), "***");
             Tuple2<String, String> enrichedMatchReplace = tryToresolveTypes(expl, typeChanges);
             return Optional.of(enrichedMatchReplace);
         }catch (Exception e){

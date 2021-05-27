@@ -56,11 +56,11 @@ public class GetUpdate {
             return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
         }
 
-        Optional<MatchReplace> explanation = before instanceof Expression && after instanceof Expression
+        MatchReplace explanation = before instanceof Expression && after instanceof Expression
                 ? getInstance(Tuple.of(root1.getPos(), root1.getEndPos())
-                            , Tuple.of(root2.getPos(), root2.getEndPos()), before, after)
-                : Optional.empty();
-        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation.orElse(null), codeMapping, typeChange);
+                            , Tuple.of(root2.getPos(), root2.getEndPos()), before, after, typeChange.getBeforeName()).orElse(null)
+                : null;
+        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation, codeMapping, typeChange);
 
         if (root1.hasSameType(root2))
             zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
@@ -69,49 +69,45 @@ public class GetUpdate {
                             .ifPresent(x -> upd.addSubExplanation(getUpdate(x._1(), x._2(), t._1(), t._2())));
             });
         else {
-            if(explanation.isPresent()) {
-                Map<String, String> unMappedTVB4 = explanation.get().getUnMatchedBefore().entrySet().stream()
+            if(explanation != null) {
+                Map<String, String> unMappedTVB4 = explanation.getUnMatchedBefore().entrySet().stream()
                         .filter(x -> !x.getKey().endsWith("c")).collect(toMap(Entry::getKey, x-> x.getValue()));
-                Map<String, String> unMappedTVAfter = explanation.get().getUnMatchedAfter().entrySet().stream()
+                Map<String, String> unMappedTVAfter = explanation.getUnMatchedAfter().entrySet().stream()
                         .filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), Entry::getValue));
-                List<Update> subUpdate = tryToMatchTheUnMatched(before, after, explanation.get(), unMappedTVB4, unMappedTVAfter);
+                List<Update> subUpdate = tryToMatchTheUnMatched(before, after, explanation, unMappedTVB4, unMappedTVAfter);
                 upd.addAllSubExplanation(subUpdate);
             }
         }
-        if(explanation.isEmpty())
-            return upd;
+
+        if(explanation == null)  return upd;
 
         List<Update> simplestDescendants = removeSubsumedEdits(getAllDescendants(upd)
-                .filter(x -> x.getExplanation().isPresent())
+                .filter(x -> x.getMatchReplace().isPresent())
                 .collect(toList()));
 
         boolean doesNotAddAnythingNew = applyUpdatesAndMatch(simplestDescendants, upd.getBeforeStr(), upd.getAfterStr());
-        if (doesNotAddAnythingNew) {
+        if (doesNotAddAnythingNew)
             if (!upd.getAsInstance().isRelevant())
-                upd.setExplanation(null);
+                upd.resetMatchReplace();
             else if (simplestDescendants.stream().noneMatch(d -> d.getAsInstance().isRelevant()))
-                upd.setExplanation(null);
+                upd.resetMatchReplace();
             else if(simplestDescendants.size() == 1
-                    && upd.getExplanation().get().getMatch().getTemplate()
-                    .contains(simplestDescendants.get(0).getExplanation().get().getMatch().getTemplate())
-                    && upd.getExplanation().get().getReplace().getTemplate()
-                    .contains(simplestDescendants.get(0).getExplanation().get().getReplace().getTemplate())){
-                upd.setExplanation(null);
-            }
+                    && explanation.getMatch().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getMatch().getTemplate())
+                    && explanation.getReplace().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getReplace().getTemplate()))
+                upd.resetMatchReplace();
             else
-                mergeParentChildrenMatchReplace(upd, simplestDescendants);
-        }
+                mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName());
         else
-            mergeParentChildrenMatchReplace(upd, simplestDescendants);
+            mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName());
 
         return upd;
     }
 
-    private void mergeParentChildrenMatchReplace(Update upd, List<Update> simplestDescendants) {
+    private void mergeParentChildrenMatchReplace(Update upd, List<Update> simplestDescendants, String beforeName) {
         for (var child : simplestDescendants) {
-            Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getExplanation().get(), child.getExplanation().get());
-            if (m.isPresent()) upd.setExplanation(m.get());
-            else child.setExplanation(null);
+            Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getMatchReplace().get(), child.getMatchReplace().get(), beforeName);
+            if (m.isPresent()) upd.setMatchReplace(m.get());
+            else child.setMatchReplace(null);
         }
     }
 
@@ -144,8 +140,8 @@ public class GetUpdate {
         }
 
         ToIntFunction<Tuple3<String, String, Update>> overlaps = upd -> Stream.concat(Stream.of(upd._3()), getAllDescendants(upd._3()))
-                .filter(i -> i.getExplanation().isPresent())
-                .mapToInt(e -> e.getExplanation().get().getGeneralizations().size())
+                .filter(i -> i.getMatchReplace().isPresent())
+                .mapToInt(e -> e.getMatchReplace().get().getGeneralizations().size())
                 .sum();
 
         holeForEachPair.sort(reverseOrder(comparingInt(overlaps)));
@@ -172,7 +168,7 @@ public class GetUpdate {
     }
 
     public Optional<MatchReplace> getInstance(Tuple2<Integer, Integer> loc_b4,
-                                              Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode) {
+                                              Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
 
         Optional<PerfectMatch> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
                 : PerfectMatch.getMatch(beforeNode);
@@ -188,7 +184,7 @@ public class GetUpdate {
                 && Stream.of(":[[id]]", ":[a~\\\".*\\\"]").anyMatch(x -> explanationAfter.get().getName().equals(x))))
             return Optional.empty();
 
-        return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get()))
+        return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get(), beforeName))
                 .onFailure(e -> System.out.println(e.toString()))
                 .toJavaOptional();
     }

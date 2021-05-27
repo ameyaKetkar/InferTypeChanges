@@ -44,7 +44,7 @@ public class Match {
     }
 
     public Map<String, String> getTemplateVarSubstitutions() {
-        return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getValue()));
+        return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getValue(), (a,b)->b));
     }
 
     public Map<String, Range__1> getTemplateVarSubstitutionsRange() {

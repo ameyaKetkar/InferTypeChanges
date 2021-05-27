@@ -27,8 +27,8 @@ public class InferredMappings {
     public InferredMappings(Tuple2<String, String> templateBeforeAfter, Update u) {
         BeforeTypeTemplate = templateBeforeAfter._1();
         AfterTypeTemplate = templateBeforeAfter._2();
-        Match = u.getExplanation().get().getMatchReplace()._1();
-        Replace = u.getExplanation().get().getMatchReplace()._2();
+        Match = u.getMatchReplace().get().getMatchReplace()._1();
+        Replace = u.getMatchReplace().get().getMatchReplace()._2();
         Instance = u.getAsInstance();
         noTv = !Match.contains(":[");
     }
@@ -83,17 +83,17 @@ public class InferredMappings {
             CompilationUnit = tc.getBeforeCu().right;
             LineNos = Tuple.of(extractLineNumber(cm.getUrlbB4()), extractLineNumber(cm.getUrlAftr()));
             Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
-            TemplateVariableToCodeBefore = upd.getExplanation().map(e -> e.getMatch().getTemplateVariableMapping())
+            TemplateVariableToCodeBefore = upd.getMatchReplace().map(e -> e.getMatch().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
-            TemplateVariableToCodeAfter = upd.getExplanation().map(e -> e.getReplace().getTemplateVariableMapping())
+            TemplateVariableToCodeAfter = upd.getMatchReplace().map(e -> e.getReplace().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
             isRelevant = isRelevant(upd);
-            RelevantImports = upd.getExplanation().map(matchReplace -> relevantImports(tc, matchReplace)).orElseGet(ArrayList::new);
+            RelevantImports = upd.getMatchReplace().map(matchReplace -> relevantImports(tc, matchReplace)).orElseGet(ArrayList::new);
 
         }
 
         private String isRelevant(Update upd) {
-            if(upd.getExplanation().isPresent() && ((TemplateVariableToCodeBefore.containsValue(Names._1())
+            if(upd.getMatchReplace().isPresent() && ((TemplateVariableToCodeBefore.containsValue(Names._1())
                     && TemplateVariableToCodeAfter.containsValue(Names._1()))))
                 return "Uses";
             if(varOnLHS(Names._1(), Before, OriginalCompleteBefore) &&
@@ -106,19 +106,19 @@ public class InferredMappings {
 
 
         private List<String> relevantImports(TypeChange tc, MatchReplace expl) {
-            Map<String, String> classNamesReferredAfter = expl.getUnMatchedAfter()
-                    .entrySet().stream().filter(x -> !expl.getGeneralizations().containsKey(x.getKey()))
+            Map<String, String> classNamesReferred = Stream.concat(expl.getUnMatchedAfter().entrySet().stream(),expl.getUnMatchedBefore().entrySet().stream())
+                    .filter(x -> !expl.getGeneralizations().containsKey(x.getKey()))
                     .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-            if(classNamesReferredAfter.isEmpty()) return new ArrayList<>();
+            if(classNamesReferred.isEmpty()) return new ArrayList<>();
 
-            Map<Boolean, List<String>> relevantImportsAfter = Stream.concat(tc.getAddedImportStatements().stream(),
+            Map<Boolean, List<String>> relevantImports = Stream.concat(Stream.concat(tc.getAddedImportStatements().stream(), tc.getRemovedImportStatements().stream()),
                     tc.getUnchangedImportStatements().stream())
                     .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
 
-            Map<String, String> resolvedTypeNames = resolveTypeNames(classNamesReferredAfter, relevantImportsAfter);
+            Map<String, String> resolvedTypeNames = resolveTypeNames(classNamesReferred, relevantImports);
             return new ArrayList<>(resolvedTypeNames.values());
 
         }
@@ -205,9 +205,9 @@ public class InferredMappings {
         }
 
         public void updateExplanation(Update upd) {
-            TemplateVariableToCodeBefore = upd.getExplanation().map(e -> e.getMatch().getTemplateVariableMapping())
+            TemplateVariableToCodeBefore = upd.getMatchReplace().map(e -> e.getMatch().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
-            TemplateVariableToCodeAfter = upd.getExplanation().map(e -> e.getReplace().getTemplateVariableMapping())
+            TemplateVariableToCodeAfter = upd.getMatchReplace().map(e -> e.getReplace().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
             isRelevant = isRelevant(upd);
         }

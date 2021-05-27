@@ -4,7 +4,6 @@ import Utilities.ASTUtils;
 import Utilities.CombyUtils;
 import Utilities.comby.Match;
 import Utilities.comby.Range__1;
-import com.google.common.collect.Iterables;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
@@ -13,6 +12,7 @@ import io.vavr.control.Try;
 import type.change.T2RLearnerException;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -33,8 +33,8 @@ public class MatchReplace {
     private final Map<String, Range__1> UnMatchedBeforeRange;
 
 
-    public MatchReplace(PerfectMatch beforep, PerfectMatch afterp) throws T2RLearnerException {
-        Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> generalization = getGeneralization(beforep, afterp);
+    public MatchReplace(PerfectMatch beforep, PerfectMatch afterp, String beforeName) throws T2RLearnerException {
+        Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> generalization = getGeneralization(beforep, afterp, beforeName);
         var generalizedMatchAfter = generalization._2();
         var generalizedMatchBefore = generalization._1();
 
@@ -51,7 +51,7 @@ public class MatchReplace {
         this.Replace = specialize(generalizedMatchAfter, UnMatchedAfter);
     }
 
-    private Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> getGeneralization(PerfectMatch beforep, PerfectMatch afterp) throws T2RLearnerException {
+    private Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> getGeneralization(PerfectMatch beforep, PerfectMatch afterp, String beforeName) throws T2RLearnerException {
         Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> generalization = generalize(beforep, afterp);
 
         Optional<Either<String, String>> wrapUnWrap = isWrapUnWrap(generalization._1(), generalization._2());
@@ -83,9 +83,15 @@ public class MatchReplace {
          * Get "the variable" and name it so!
          */
 
+        BiPredicate<Tuple3<PerfectMatch, PerfectMatch, Map<String, String>>, String> isTheVariable =
+                (gen,varName) -> gen._1().getTemplateVariableMapping().get(varName).equals(beforeName) &&
+                        gen._2().getTemplateVariableMapping().get(varName).equals(beforeName);
+
+        Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> finalGeneralization = generalization;
 
         Map<String, String> normalizationRenames = IntStream.range(0, intersectingTemplateVars.size()).boxed()
-                .collect(toMap(intersectingTemplateVars::get, x -> "v" + x));
+                .collect(toMap(intersectingTemplateVars::get, x -> isTheVariable.test(finalGeneralization, intersectingTemplateVars.get(x))
+                        ? "TCIVar" : "v" + x));
 
         generalization._2().rename(normalizationRenames);
         generalization._1().rename(normalizationRenames);
@@ -213,11 +219,12 @@ public class MatchReplace {
     /**
      * @param parent
      * @param child
+     * @param beforeName
      * @return Returns an explanation where the parent template is merged with the child template
      * The merge can happen iff one of the template variables in the parent template perfectly match the before
      * and after of the child explanation
      */
-    public static Optional<MatchReplace> mergeParentChildMatchReplace(MatchReplace parent, MatchReplace child) {
+    public static Optional<MatchReplace> mergeParentChildMatchReplace(MatchReplace parent, MatchReplace child, String beforeName) {
         Optional<Tuple2<String, String>> b4 = Optional.empty();
         Optional<Tuple2<String, String>> aftr = Optional.empty();
 
@@ -265,7 +272,7 @@ public class MatchReplace {
             if (newExplainationAfter.isPresent() && newExplainationBefore.isPresent()) {
                 PerfectMatch before = new PerfectMatch(parent.getMatch().getName() + "----" + child.getMatch().getName(), mergedB4, newExplainationBefore.get());
                 PerfectMatch after = new PerfectMatch(parent.getReplace().getName() + "----" + child.getReplace().getName(), mergedAfter, newExplainationAfter.get());
-                return Try.of(() -> new MatchReplace(before, after)).onFailure(e -> e.printStackTrace()).toJavaOptional();
+                return Try.of(() -> new MatchReplace(before, after, beforeName)).onFailure(e -> e.printStackTrace()).toJavaOptional();
             }
         }
         return Optional.empty();

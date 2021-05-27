@@ -19,28 +19,28 @@ public class Update {
     private final Tree after;
     private final String beforeStr;
     private final String afterStr;
-    private MatchReplace explanation;
+    private MatchReplace matchReplace;
     private final List<Update> subUpdates;
     private Instance project_commit_cu_los;
 
-    public Update(Tree before, Tree after, String beforeStr, String afterStr, MatchReplace explanation, CodeMapping codeMapping, TypeChange typeChange) {
+    public Update(Tree before, Tree after, String beforeStr, String afterStr, MatchReplace matchReplace, CodeMapping codeMapping, TypeChange typeChange) {
         this.before = before;
         this.after = after;
         this.beforeStr = beforeStr;
         this.afterStr = afterStr;
         this.subUpdates = new ArrayList<>();
-        this.explanation = explanation;
+        this.matchReplace = matchReplace;
         this.project_commit_cu_los = new Instance(codeMapping, this, typeChange);
     }
 
     public Optional<String> applyUpdate(String source){
-        if(explanation == null) return Optional.empty();
-        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(explanation.getMatchReplace()._1(), explanation.getMatchReplace()._2(), source);
+        if(matchReplace == null) return Optional.empty();
+        Optional<CombyRewrite> rewrite = CombyUtils.rewrite(matchReplace.getMatchReplace()._1(), matchReplace.getMatchReplace()._2(), source);
         return rewrite.map(CombyRewrite::getRewrittenSource);
     }
 
     public Optional<String> applyCutPaste(String source){
-        if(explanation == null) return Optional.empty();
+        if(matchReplace == null) return Optional.empty();
         if(source.contains(getBeforeStr())) return Optional.of(source.replace(getBeforeStr(), getAfterStr()));
         return Optional.empty();
     }
@@ -61,8 +61,8 @@ public class Update {
         return after;
     }
 
-    public Optional<MatchReplace> getExplanation() {
-        return Optional.ofNullable(explanation);
+    public Optional<MatchReplace> getMatchReplace() {
+        return Optional.ofNullable(matchReplace);
     }
 
     public void addSubExplanation(Update u){
@@ -108,10 +108,13 @@ public class Update {
         return false;
     }
 
+    public void resetMatchReplace() {
+        this.matchReplace = null;
+        this.project_commit_cu_los = null;
+    }
 
-
-    public void setExplanation(MatchReplace e) {
-        this.explanation = e;
+    public void setMatchReplace(MatchReplace e) {
+        this.matchReplace = e;
         if(e != null)
             this.project_commit_cu_los.updateExplanation(this);
         else this.project_commit_cu_los = null;

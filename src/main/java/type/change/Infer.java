@@ -19,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -60,8 +59,8 @@ public class Infer {
 
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
 
-        if(!commit.startsWith("29bcb44528a2bf2d1ac7aa7715f38f5164e498aa"))
-            return CompletableFuture.completedFuture(null);
+//        if(!commit.startsWith("de410aa8d"))
+//            return CompletableFuture.completedFuture(null);
 
         return CompletableFuture.supplyAsync(() -> Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoClonURL, commit)))
                 .filterOrElse(Optional::isPresent, x-> "REFACTORING MINER RESPONSE IS EMPTY !!!!! ").map(Optional::get))
@@ -94,7 +93,7 @@ public class Infer {
                             return Stream.empty();
                         }
                         return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
-//                                .filter(x -> x.getB4().contains("DefaultFileSystem"))
+//                                .filter(x -> x.getAfter().contains("return osFile != null && Files.exists(osFile);"))
                                 .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                                         .thenApply(ls -> ls.stream().map(a -> new Gson()
                                                 .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
@@ -164,14 +163,14 @@ public class Infer {
         }
 
         explainableUpdates = Stream.concat(Stream.of(upd), getAllDescendants(upd))
-                .filter(i -> i.getExplanation().isPresent() && i.getAsInstance().isRelevant())
+                .filter(i -> i.getMatchReplace().isPresent() && i.getAsInstance().isRelevant())
                 .collect(toList());
 
         if (explainableUpdates.isEmpty())
             LOGGER.info("NO EXPLAINABLE UPDATE FOUND!!!");
 
         for (var expln : explainableUpdates)
-            System.out.println(expln.getExplanation().get().getMatchReplace().toString());
+            System.out.println(expln.getMatchReplace().get().getMatchReplace().toString());
 
         System.out.println("----------");
 
