@@ -33,6 +33,40 @@ public class PerfectMatch {
         Template = template;
         Match = match;
         CodeSnippet = match.getMatched();
+        Map<String, String> mergeSameValuedTemplateVars = getTemplateVariablesWithSameValue();
+        if(!mergeSameValuedTemplateVars.isEmpty())
+            rename(mergeSameValuedTemplateVars);
+    }
+
+    public Map<String, String> getTemplateVariablesWithSameValue() {
+        Set<Set<String>> mergeSameValuedTemplateVars = new HashSet<>();
+        for(var e1: Match.getTemplateVarSubstitutions().entrySet()){
+            for(var e2: Match.getTemplateVarSubstitutions().entrySet()){
+                if(e1.getKey().equals(e2.getKey())) continue;
+                if(e1.getValue().equals("") || !e1.getValue().equals(e2.getValue())) continue;
+                Optional<Set<String>> s = mergeSameValuedTemplateVars.stream().filter(x -> x.contains(e1.getKey()) || x.contains(e2.getKey()))
+                        .findFirst();
+                if(s.isPresent()){
+                    mergeSameValuedTemplateVars.stream().filter(x -> x.contains(e1.getKey()) || x.contains(e2.getKey()))
+                            .findFirst().get().add(e1.getKey());
+                    mergeSameValuedTemplateVars.stream().filter(x -> x.contains(e1.getKey()) || x.contains(e2.getKey()))
+                            .findFirst().get().add(e2.getKey());
+                }else{
+                    mergeSameValuedTemplateVars.add(new HashSet<>(){{add(e1.getKey());e2.getKey();}});
+                }
+            }
+        }
+        Map<String, String> renameSimilarValuedTVs = new HashMap<>();
+        for(var s: mergeSameValuedTemplateVars){
+            if(s.size() <= 1) continue;
+            String fst = s.contains("TCIVar") ? "TCIVar" : s.iterator().next();
+            s.stream().filter(x -> !x.equals(fst))
+                        .forEach(r -> renameSimilarValuedTVs.put(r, fst));
+
+        }
+
+
+        return renameSimilarValuedTVs;
     }
 
     public PerfectMatch(String name, String template, CombyMatch cm){
@@ -40,8 +74,10 @@ public class PerfectMatch {
     }
 
     // Renames the after to before in the after template
-    public static Tuple3<PerfectMatch, PerfectMatch, Map<String, String>> generalize(PerfectMatch before, PerfectMatch after){
-        Map<String, String> afterNameBeforeName = getIntersection(before, after);
+    public static Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> generalize(PerfectMatch before, PerfectMatch after){
+        Map<String, List<String>> intersection = getIntersection(before, after);
+        Map<String, String> afterNameBeforeName = intersection.entrySet().stream().flatMap(x -> x.getValue().stream().map(y -> Tuple.of(y, x.getKey())))
+                .collect(toMap(x -> x._1(), x -> x._2()));
         Tuple2<PerfectMatch, PerfectMatch> t1 = safeRename(before, after, afterNameBeforeName);
         return t1.concat(Tuple.of(getIntersection(t1._1(), t1._2())));
     }
@@ -117,7 +153,7 @@ public class PerfectMatch {
         return Match.getTemplateVarSubstitutions();
     }
 
-    public Map<String, Range__1> getTemplateVariableMappingRange(){
+    public Map<String, List<Range__1>> getTemplateVariableMappingRange(){
         return Match.getTemplateVarSubstitutionsRange();
     }
 
@@ -156,27 +192,22 @@ public class PerfectMatch {
         return Optional.empty();
     }
 
-    public static Map<String, String> getIntersection(PerfectMatch before, PerfectMatch after) {
-        Map<String, String> intersectingTemplateVars = new HashMap<>();
+    public static Map<String, List<String>> getIntersection(PerfectMatch before, PerfectMatch after) {
+        Map<String, List<String>> intersectingTemplateVars = new HashMap<>();
 
         for (var entry_b4 : before.getTemplateVariableMapping().entrySet()) {
             if (entry_b4.getKey().endsWith("c")) continue;
-            String matchedTemplateVar = "";
+            List<String> matchedTemplateVars = new ArrayList<>();
             for (var entry_after : after.getTemplateVariableMapping().entrySet()) {
                 if (entry_after.getKey().endsWith("c")) continue;
                 if (entry_b4.getValue().replace("\\n", "")
                         .equals(entry_after.getValue().replace("\\n", ""))) {
-                    if (matchedTemplateVar.isEmpty())
-                        matchedTemplateVar = entry_after.getKey();
-                    if (entry_b4.getKey().equals(entry_after.getKey())) {
-                        matchedTemplateVar = entry_after.getKey();
-                        break;
-                    }
+                    matchedTemplateVars.add(entry_after.getKey());
 
                 }
             }
-            if (!matchedTemplateVar.isEmpty())
-                intersectingTemplateVars.put(matchedTemplateVar, entry_b4.getKey());
+            if (!matchedTemplateVars.isEmpty())
+                intersectingTemplateVars.put(entry_b4.getKey(), matchedTemplateVars);
         }
         return intersectingTemplateVars;
     }

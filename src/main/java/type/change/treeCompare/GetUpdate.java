@@ -1,6 +1,7 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
+import Utilities.comby.Range__1;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
@@ -34,12 +35,14 @@ public class GetUpdate {
     private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesAfter;
     private final CodeMapping codeMapping;
     private final TypeChange typeChange;
+    private final String commit;
 
-    public GetUpdate(CodeMapping codeMapping, TypeChange typeChange) {
+    public GetUpdate(CodeMapping codeMapping, TypeChange typeChange, String commit) {
         this.codeMapping = codeMapping;
         this.typeChange = typeChange;
         matchesB4 = new HashMap<>();
         matchesAfter = new HashMap<>();
+        this.commit = commit;
     }
 
     public boolean areEqualInText(Tree t1, Tree t2){
@@ -96,16 +99,16 @@ public class GetUpdate {
                     && explanation.getReplace().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getReplace().getTemplate()))
                 upd.resetMatchReplace();
             else
-                mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName());
+                mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName(),commit );
         else
-            mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName());
+            mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName(), commit);
 
         return upd;
     }
 
-    private void mergeParentChildrenMatchReplace(Update upd, List<Update> simplestDescendants, String beforeName) {
+    private void mergeParentChildrenMatchReplace(Update upd, List<Update> simplestDescendants, String beforeName, String commit) {
         for (var child : simplestDescendants) {
-            Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getMatchReplace().get(), child.getMatchReplace().get(), beforeName);
+            Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getMatchReplace().get(), child.getMatchReplace().get(), beforeName, commit);
             if (m.isPresent()) upd.setMatchReplace(m.get());
             else child.setMatchReplace(null);
         }
@@ -128,14 +131,18 @@ public class GetUpdate {
 
         List<Tuple3<String, String, Update>> holeForEachPair = new ArrayList<>();
         for(var ub: unMappedTVB4.entrySet()){
-            Optional<ASTNode> n1 = getCoveringNode(before, expl.getUnMatchedBeforeRange().get(ub.getKey()));
-            if (n1.isEmpty() || n1.get().toString().equals(before.toString())) continue;
-            for(var ua: unMappedTVAfter.entrySet()){
-                Optional<ASTNode> n2 = getCoveringNode(after, expl.getUnMatchedAfterRange().get(ua.getKey()));
-                if (n2.isEmpty() || n2.get().toString().equals(after.toString())) continue;
-                Update upd = getUpdate(n1.get(), n2.get());
-                if(upd == null) continue;
-                holeForEachPair.add(Tuple.of(ub.getKey(), ua.getKey(), upd));
+            for(var r: expl.getUnMatchedBeforeRange().get(ub.getKey())) {
+                Optional<ASTNode> n1 = getCoveringNode(before, r);
+                if (n1.isEmpty() || n1.get().toString().equals(before.toString())) continue;
+                for (var ua : unMappedTVAfter.entrySet()) {
+                    for(var r2: expl.getUnMatchedAfterRange().get(ua.getKey())) {
+                        Optional<ASTNode> n2 = getCoveringNode(after, r2);
+                        if (n2.isEmpty() || n2.get().toString().equals(after.toString())) continue;
+                        Update upd = getUpdate(n1.get(), n2.get());
+                        if (upd == null) continue;
+                        holeForEachPair.add(Tuple.of(ub.getKey(), ua.getKey(), upd));
+                    }
+                }
             }
         }
 

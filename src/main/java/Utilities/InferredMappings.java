@@ -110,7 +110,7 @@ public class InferredMappings {
                     .filter(x -> !expl.getGeneralizations().containsKey(x.getKey()))
                     .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
-                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a,b)->a));
 
             if(classNamesReferred.isEmpty()) return new ArrayList<>();
 

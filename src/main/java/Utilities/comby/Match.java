@@ -8,7 +8,7 @@ import javax.annotation.Generated;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 @Generated("jsonschema2pojo")
 public class Match {
@@ -47,8 +47,9 @@ public class Match {
         return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getValue(), (a,b)->b));
     }
 
-    public Map<String, Range__1> getTemplateVarSubstitutionsRange() {
-        return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getRange()));
+    public Map<String, List<Range__1>> getTemplateVarSubstitutionsRange() {
+        return getEnvironment().stream().collect(groupingBy(x -> x.getVariable(),
+                collectingAndThen(toList(), lss -> lss.stream().map(x->x.getRange()).collect(toList()))));
     }
 
     public void setMatched(String matched) {

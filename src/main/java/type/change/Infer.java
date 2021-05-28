@@ -57,12 +57,12 @@ public class Infer {
     }
 
 
-    public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoClonURL, String commit, Path outputFile) {
+    public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile) {
 
-//        if(!commit.startsWith("de410aa8d"))
+//        if(!commit.startsWith("f6ca9e9025"))
 //            return CompletableFuture.completedFuture(null);
 
-        return CompletableFuture.supplyAsync(() -> Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoClonURL, commit)))
+        return CompletableFuture.supplyAsync(() -> Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoCloneURL, commit)))
                 .filterOrElse(Optional::isPresent, x-> "REFACTORING MINER RESPONSE IS EMPTY !!!!! ").map(Optional::get))
                 .thenApply(response -> response.map(x -> new Gson().fromJson(response.get(), Response.class))
                         .filterOrElse(r -> r != null && r.commits != null,r -> "REFACTORING MINER RESPONSE IS EMPTY !!!!! "))
@@ -92,8 +92,8 @@ public class Infer {
                             System.out.println("COULD NOT CAPTURE THE TYPE CHANGE PATTERN FOR " + rfctr.getB4Type() + "    " + rfctr.getAfterType());
                             return Stream.empty();
                         }
-                        return getAsCodeMapping(repoClonURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
-//                                .filter(x -> x.getAfter().contains("return osFile != null && Files.exists(osFile);"))
+                        return getAsCodeMapping(repoCloneURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+//                                .filter(x -> x.getAfter().contains("classesDir.resolve(endpointPath);"))
                                 .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
                                         .thenApply(ls -> ls.stream().map(a -> new Gson()
                                                 .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
@@ -154,7 +154,7 @@ public class Infer {
         System.out.println("Analyzing : " + commit);
         System.out.println(String.join("\n->\n", stmtB4, stmtAftr));
 
-        GetUpdate gu = new GetUpdate(codeMapping, typeChange);
+        GetUpdate gu = new GetUpdate(codeMapping, typeChange, commit);
         Update upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
 
         if (upd == null) {

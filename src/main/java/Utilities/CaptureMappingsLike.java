@@ -45,7 +45,9 @@ public class CaptureMappingsLike {
             try {
                 if (mi.getExpression()!= null && ASTNode.SIMPLE_NAME == mi.getExpression().getNodeType() && Character.isUpperCase(mi.getExpression().toString().charAt(0))) {
                     return List.of(":[exc~([A-Z][a-z0-9]+)+].:[[c]]" + "(" + generateArgs(mi.arguments().size()) + ")",
-                            ":[exc~([A-Z][a-z0-9]+)+].<:[ta]>:[[c]]" + "(" + generateArgs(mi.arguments().size()) + ")");
+                            ":[exc~([A-Z][a-z0-9]+)+].<:[ta]>:[[c]]" + "(" + generateArgs(mi.arguments().size()) + ")",
+                            ":[r].:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")",
+                            ":[r].<:[ta]>:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")");
                 }
             }catch (Exception e){
                 return new ArrayList<>();
