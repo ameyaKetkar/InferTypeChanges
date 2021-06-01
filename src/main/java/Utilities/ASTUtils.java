@@ -173,51 +173,7 @@ public class ASTUtils {
         }
     }
 //
-//    public static Tuple2<MappingStore, List<Action>> getGumTreeEditScript(ASTNode before, ASTNode after) {
-////        try {
-////            TreeContext src = getGumTreeContextForASTNode(before).orElseThrow();
-////            TreeContext dst = getGumTreeContextForASTNode(after).orElseThrow();
-////            Matcher m = Matchers.getInstance().getMatcher("gumtree-simple");
-////            EditScriptGenerator e = new SimplifiedChawatheScriptGenerator();
-////            if (src == null || dst == null) return Tuple.of(null, new ArrayList<>());
-////            MappingStore match = m.match(src.getRoot(), dst.getRoot());
-////            EditScript editScript = e.computeActions(match);
-////            return Tuple.of(match, editScript.asList());
-////        } catch (Exception e) {
-////            e.printStackTrace();
-////        }
-//        return Tuple.of(null, new ArrayList<>());
-//    }
 
-
-//    public static IUpdate getUpdateNew(ASTNode before, ASTNode after) {
-//
-//        ITree root1 = getGumTreeContextForASTNode(before).map(c -> c.getRoot()).orElse(null);
-//        ITree root2 = getGumTreeContextForASTNode(after).map(c -> c.getRoot()).orElse(null);
-//
-//        if (root1 == null || root2 == null || root1.isIsomorphicTo(root2)) {
-//            return new NoUpdate();
-//        }
-//
-//        Update upd = new Update(root1, root2, before.toString(), after.toString());
-//
-//        if (before instanceof Expression && after instanceof Expression)
-//            upd.setExplanation(getInstance(before.toString(), after.toString()));
-//        if (root1.hasSameType(root2)) {
-//            List<Tuple2<ASTNode, ASTNode>> ast_children = zip(getChildren(root1), getChildren(root2),
-//                    (x, y) -> getCoveringNode(before, x).flatMap(t -> getCoveringNode(after, y).map(z -> Tuple.of(t, z))))
-//                    .flatMap(Optional::stream)
-//                    .collect(toList());
-//            ast_children.forEach(t -> upd.addSubExplanation(getUpdate(t._1(), t._2())));
-//        }
-//        return upd;
-//    }
-
-//    public static boolean isIsomorphic(String s1, String s2, Statement ss1, Statement ss2){
-//        ITree root1 = ASTUtils.getGumTreeContextForASTNode(ss1).map(c -> c.getRoot()).orElse(null);
-//        ITree root2 = ASTUtils.getGumTreeContextForASTNode(ss2).map(c -> c.getRoot()).orElse(null);
-//
-//    }
 
     public static Stream<Tree> getChildren(Tree root1) {
 //        if(root1.getChildren().size() == 1){

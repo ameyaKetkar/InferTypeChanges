@@ -8,6 +8,8 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChang
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
+import io.vavr.Tuple4;
+import io.vavr.control.Either;
 import io.vavr.control.Try;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Expression;
@@ -22,8 +24,7 @@ import static com.google.common.collect.Streams.zip;
 import static java.util.Collections.reverseOrder;
 import static java.util.Comparator.comparingInt;
 import static java.util.Map.*;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 import static type.change.treeCompare.MatchReplace.mergeParentChildMatchReplace;
 import static type.change.treeCompare.Update.applyUpdatesAndMatch;
 import static type.change.treeCompare.Update.getAllDescendants;
@@ -59,30 +60,45 @@ public class GetUpdate {
             return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
         }
 
-        MatchReplace explanation = before instanceof Expression && after instanceof Expression
-                ? getInstance(Tuple.of(root1.getPos(), root1.getEndPos())
-                            , Tuple.of(root2.getPos(), root2.getEndPos()), before, after, typeChange.getBeforeName()).orElse(null)
-                : null;
-        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation, codeMapping, typeChange);
+        Either<String,MatchReplace> explanation = before instanceof Expression && after instanceof Expression
+                ? getMatchReplace(Tuple.of(root1.getPos(), root1.getEndPos())
+                            , Tuple.of(root2.getPos(), root2.getEndPos()), before, after, typeChange.getBeforeName())
+                : Either.left("Not an expression");
 
-        if (root1.hasSameType(root2))
-            zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
-                if (!t._1().isIsomorphicTo(t._2()))
-                    getCoveringNode(before, t._1()).flatMap(x -> getCoveringNode(after, t._2()).map(y -> Tuple.of(x, y)))
-                            .ifPresent(x -> upd.addSubExplanation(getUpdate(x._1(), x._2(), t._1(), t._2())));
-            });
+        if(!explanation.isEmpty() && explanation.get().getGeneralizations().isEmpty()){
+             explanation = getMatchReplaceCompleteDecomposition(Tuple.of(root1.getPos(), root1.getEndPos())
+                     , Tuple.of(root2.getPos(), root2.getEndPos()), before, after, typeChange.getBeforeName())
+                     .map(x->Either.<String, MatchReplace>right(x))
+                     .orElse(explanation);
+        }
+
+        Update upd = new Update(root1, root2, before.toString(), after.toString(), explanation.getOrNull(), codeMapping, typeChange);
+
+        if (root1.hasSameType(root2)) {
+            List<Update> subUpdate = tryToMatchCandidates(before, after
+                    , getChildren(root1).flatMap(x -> getCoveringNode(before, x).stream()).collect(toList())
+                    , getChildren(root2).flatMap(x -> getCoveringNode(after, x).stream()).collect(toList()));
+            upd.addAllSubExplanation(subUpdate);
+        }
+//
+//            zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
+//                if (!t._1().isIsomorphicTo(t._2()))
+//                    getCoveringNode(before, t._1()).flatMap(x -> getCoveringNode(after, t._2()).map(y -> Tuple.of(x, y)))
+//                            .ifPresent(x -> upd.addSubExplanation(getUpdate(x._1(), x._2(), t._1(), t._2())));
+//            });
         else {
-            if(explanation != null) {
-                Map<String, String> unMappedTVB4 = explanation.getUnMatchedBefore().entrySet().stream()
+            if(!explanation.isEmpty()) {
+                Map<String, String> unMappedTVB4 = explanation.get().getUnMatchedBefore().entrySet().stream()
                         .filter(x -> !x.getKey().endsWith("c")).collect(toMap(Entry::getKey, x-> x.getValue()));
-                Map<String, String> unMappedTVAfter = explanation.getUnMatchedAfter().entrySet().stream()
+                Map<String, String> unMappedTVAfter = explanation.get().getUnMatchedAfter().entrySet().stream()
                         .filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), Entry::getValue));
-                List<Update> subUpdate = tryToMatchTheUnMatched(before, after, explanation, unMappedTVB4, unMappedTVAfter);
+                List<Update> subUpdate = tryToMatchTheUnMatched(before, after, explanation.get(), unMappedTVB4, unMappedTVAfter);
                 upd.addAllSubExplanation(subUpdate);
             }
         }
-
-        if(explanation == null)  return upd;
+        if(explanation.isEmpty()) {
+            return upd;
+        }
 
         List<Update> simplestDescendants = removeSubsumedEdits(getAllDescendants(upd)
                 .filter(x -> x.getMatchReplace().isPresent())
@@ -95,14 +111,13 @@ public class GetUpdate {
             else if (simplestDescendants.stream().noneMatch(d -> d.getAsInstance().isRelevant()))
                 upd.resetMatchReplace();
             else if(simplestDescendants.size() == 1
-                    && explanation.getMatch().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getMatch().getTemplate())
-                    && explanation.getReplace().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getReplace().getTemplate()))
+                    && explanation.get().getMatch().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getMatch().getTemplate())
+                    && explanation.get().getReplace().getTemplate().contains(simplestDescendants.get(0).getMatchReplace().get().getReplace().getTemplate()))
                 upd.resetMatchReplace();
             else
                 mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName(),commit );
         else
             mergeParentChildrenMatchReplace(upd, simplestDescendants, typeChange.getBeforeName(), commit);
-
         return upd;
     }
 
@@ -124,6 +139,55 @@ public class GetUpdate {
             }
         }
         return allUpdates.stream().filter(x -> !subsumedEdits.contains(x)).collect(toList());
+    }
+
+    public List<Update> tryToMatchCandidates(ASTNode before, ASTNode after,
+                                             Collection<ASTNode> childrenB4, Collection<ASTNode> childrenAfter) {
+
+
+        Map<ASTNode, ASTNode> exactMatches = childrenB4.stream()
+                .flatMap(x -> childrenAfter.stream().filter(y->y.toString().equals(x.toString()))
+                        .map(y->Tuple.of(x, y)))
+                .collect(toMap(x->x._1(), x->x._2()));
+
+        ToIntFunction<Update> overlaps = upd -> Stream.concat(Stream.of(upd), getAllDescendants(upd))
+                .filter(i -> i.getMatchReplace().isPresent())
+                .mapToInt(e -> e.getMatchReplace().get().getGeneralizations().size())
+                .sum();
+
+        List<Tuple4<ASTNode, ASTNode, Update, Integer>> holeForEachPair = new ArrayList<>();
+        for(var n1: childrenB4){
+                if (exactMatches.containsKey(n1) || n1.toString().equals(before.toString())) continue;
+
+                for (var n2 : childrenAfter) {
+                    if (exactMatches.containsValue(n2)||n2.toString().equals(after.toString())) continue;
+                    Update upd = getUpdate(n1, n2);
+                    if (upd == null) continue;
+                    holeForEachPair.add(Tuple.of(n1, n2, upd, overlaps.applyAsInt(upd)));
+                }
+        }
+
+
+
+        holeForEachPair.sort(reverseOrder(comparingInt(x -> x._4())));
+
+        for(var e: exactMatches.entrySet()){
+            holeForEachPair.add(0, Tuple.of(e.getKey(), e.getValue(), getUpdate(e.getKey(), e.getValue()), 1));
+        }
+
+        List<Update> result = new ArrayList<>();
+        Set<String> alreadyConsideredB4 = new HashSet<>();
+        Set<String> alreadyConsideredAfter = new HashSet<>();
+
+        for(var e: holeForEachPair){
+            if(alreadyConsideredB4.contains(e._1().toString()) || alreadyConsideredAfter.contains(e._2().toString()))
+                continue;
+            result.add(e._3());
+            alreadyConsideredB4.add(e._1().toString());
+            alreadyConsideredAfter.add(e._2().toString());
+        }
+
+        return result;
     }
 
     public List<Update> tryToMatchTheUnMatched(ASTNode before, ASTNode after, MatchReplace expl,
@@ -174,21 +238,49 @@ public class GetUpdate {
         return getUpdate(before, after, root1, root2);
     }
 
-    public Optional<MatchReplace> getInstance(Tuple2<Integer, Integer> loc_b4,
-                                              Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
+    public Either<String, MatchReplace> getMatchReplace(Tuple2<Integer, Integer> loc_b4,
+                                                        Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
 
         Optional<PerfectMatch> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
                 : PerfectMatch.getMatch(beforeNode);
         matchesB4.put(loc_b4, explanationBefore);
-        if (explanationBefore.isEmpty()) return Optional.empty();
+        if (explanationBefore.isEmpty()) return Either.left("Could not explain Before");
 
         Optional<PerfectMatch> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
                 : PerfectMatch.getMatch(afterNode);
 
         matchesAfter.put(loc_aftr, explanationAfter);
 
-        if (explanationAfter.isEmpty() || (explanationBefore.get().getName().equals(explanationAfter.get().getName())
+        if (explanationAfter.isEmpty())
+            return Either.left("Could not match after");
+
+        if ((explanationBefore.get().getName().equals(explanationAfter.get().getName())
                 && Stream.of(":[[id]]", ":[a~\\\".*\\\"]").anyMatch(x -> explanationAfter.get().getName().equals(x))))
+            return Either.left("Identifier updates");
+
+        return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get(), beforeName))
+                .onFailure(e -> System.out.println(e.toString()))
+                .toJavaOptional()
+                .map(Either::<String, MatchReplace>right)
+                .orElse(Either.left("Error when computing MatchReplace"));
+
+    }
+
+    public Optional<MatchReplace> getMatchReplaceCompleteDecomposition(Tuple2<Integer, Integer> loc_b4,
+                                                  Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
+
+        Optional<PerfectMatch> explanationBefore = PerfectMatch.getMatch(beforeNode).map(PerfectMatch::completelyDecompose);
+
+        matchesB4.put(loc_b4, explanationBefore);
+        if (explanationBefore.isEmpty()) return Optional.empty();
+
+        Optional<PerfectMatch> explanationAfter = PerfectMatch.getMatch(afterNode).map(PerfectMatch::completelyDecompose);
+
+        matchesAfter.put(loc_aftr, explanationAfter);
+
+        if (explanationAfter.isEmpty() || (explanationBefore.get().getName().equals(explanationAfter.get().getName())
+                && Set.of(":[[id]]", ":[a~\\\".*\\\"]").contains(explanationAfter.get().getName())))
+//                && Stream.of(":[[id]]", ":[a~\\\".*\\\"]").anyMatch(x -> explanationAfter.get().getName().equals(x))))
             return Optional.empty();
 
         return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get(), beforeName))

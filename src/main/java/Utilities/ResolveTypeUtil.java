@@ -3,12 +3,14 @@ package Utilities;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.control.Try;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.PerfectMatch;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -49,7 +51,7 @@ public class ResolveTypeUtil {
         return unMatched.entrySet().stream()
                 .filter(x -> template.contains(x.getValue()))
                 .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
-                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(toMap(Entry::getKey, Entry::getValue));
     }
 
     private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {
@@ -79,10 +81,8 @@ public class ResolveTypeUtil {
 
     public static Map<String, String> resolveTypeNames(Map<String, String> tvMap, Map<Boolean, List<String>> relevantImports) {
         return tvMap.entrySet().stream()
-                .map(x -> Tuple.of(x.getValue(), resolveType(x, relevantImports)))
-                .filter(x -> x._2().isPresent())
-                .map(x -> x.map2(y -> y.get()))
-                .collect(toMap(x -> x._1(), x -> x._2(), (a, b) -> a));
+                .flatMap(x -> resolveType(x, relevantImports).stream().map(y -> Tuple.of(x.getValue(), y)))
+                .collect(toMap(Tuple2::_1, Tuple2::_2, (a, b) -> a));
     }
 
     private static String performRenameIdentifier(String source, Map<String, String> renameMapping) {
@@ -93,21 +93,21 @@ public class ResolveTypeUtil {
         return curr;
     }
 
-    private static Optional<String> resolveType(Map.Entry<String, String> b, Map<Boolean, List<String>> relevantImports) {
-        return isPrimitive(b).or(() -> relevantImports.getOrDefault(true, new ArrayList<>()).stream()
-                .filter(x -> x.endsWith("." + b.getValue())).findFirst())
-                .or(() -> findInBuiltInJava(relevantImports.getOrDefault(false, new ArrayList<>()), b));
+    private static Optional<String> resolveType(Entry<String, String> tv_value, Map<Boolean, List<String>> relevantImports) {
+        return isPrimitive(tv_value).or(() -> relevantImports.getOrDefault(true, new ArrayList<>()).stream()
+                .filter(x -> x.endsWith("." + tv_value.getValue())).findFirst())
+                .or(() -> findInBuiltInJava(relevantImports.getOrDefault(false, new ArrayList<>()), tv_value));
     }
 
-    private static Optional<String> findInBuiltInJava(List<String> packages, Map.Entry<String, String> b) {
-        Optional<String> response = HttpUtils.makeHttpRequest(Map.of("purpose", "Resolve", "lookup", b.getValue(), "packages",
-                String.join(",", packages)))
+    private static Optional<String> findInBuiltInJava(List<String> packages, Entry<String, String> b) {
+        Optional<String> response = Try.of(() -> HttpUtils.makeHttpRequest(Map.of("purpose", "Resolve", "lookup", b.getValue(), "packages",
+                String.join(",", packages)))).getOrElse(Optional.empty())
                 .map(x -> new Gson().fromJson(x, ResolveResponse.class).QualifiedName)
                 .filter(x -> !x.isEmpty());
         return response;
     }
 
-    private static Optional<String> isPrimitive(Map.Entry<String, String> b) {
+    private static Optional<String> isPrimitive(Entry<String, String> b) {
         return SYNTACTIC_TYPE_CHANGES.entrySet().stream().filter(x -> x.getKey().startsWith("prim"))
                 .flatMap(x -> getPerfectMatch(x.getValue(), b.getValue(), null)
                         .map(y -> b.getValue()).stream()).findFirst();

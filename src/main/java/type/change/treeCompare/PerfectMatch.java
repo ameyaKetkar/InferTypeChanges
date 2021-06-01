@@ -161,6 +161,39 @@ public class PerfectMatch {
         return CodeSnippet;
     }
 
+    public static PerfectMatch completelyDecompose(PerfectMatch x){
+        PerfectMatch m = x;
+        for(var v: x.getTemplateVariableMapping().entrySet()){
+            m = PerfectMatch.completelyDecompose(m, v.getKey());
+        }
+        return m;
+    }
+
+    private static PerfectMatch completelyDecompose(PerfectMatch m, String templateVariable){
+        Queue<String> tvs = new ArrayDeque<>();
+        tvs.add(templateVariable);
+        int i = 4;
+        while(!tvs.isEmpty() && i >= 0) {
+            String tv = tvs.remove();
+            String decomposeSnippet = m.Match.getTemplateVarSubstitutions().get(tv);
+            Optional<PerfectMatch> decomposedTemplate = ASTUtils.getExpression(decomposeSnippet).flatMap(PerfectMatch::getMatch)
+                    .filter(x -> !x.getName().equals(":[[id]]"));
+            if (decomposedTemplate.isEmpty())
+                return m;
+            Map<String, String> renames = decomposedTemplate.get().getTemplateVariableMapping()
+                    .keySet().stream().collect(toMap(x -> x, x -> tv + "x" + x));
+            tvs.addAll(renames.values());
+            String newTemplate = renamedInstance(renames, decomposedTemplate.get()).getTemplate();
+            String tryTemplate = CombyUtils.substitute(m.Template, tv, newTemplate);
+            var t = getPerfectMatch(tryTemplate,m.CodeSnippet, null);
+            if(t.isPresent()){
+                m = new PerfectMatch(m.Name + "-" + decomposedTemplate.get().getName(), tryTemplate, t.get());
+            }
+            i-=1;
+        }
+        return m;
+    }
+
     public Optional<PerfectMatch> decompose(String templateVariable){
         String decomposeSnippet = Match.getTemplateVarSubstitutions().get(templateVariable);
         Optional<PerfectMatch> decomposedTemplate = ASTUtils.getExpression(decomposeSnippet).flatMap(PerfectMatch::getMatch);

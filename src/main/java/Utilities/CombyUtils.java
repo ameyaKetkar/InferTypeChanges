@@ -24,19 +24,26 @@ public class CombyUtils {
     public static Optional<CombyMatch> getMatch(String template, String source, String language) {
 
         template = template.replace("\\\"", "\"");
-        source = source.replace("\\\"", "\"");
+        source = source.replace("\\\"", "\"");//;.replace("\\","\\\\");
+//        source = RWUtils.escapeMetaCharacters(source);
 
         try {
+            boolean flag = false;
 //            System.out.println("MATCH        "  + template + "       " + source);
             String result = getMatchCmd(template, source, language, null);
+            if(result == null || result.isEmpty()){
+                result = getMatchCmd(template, source.replace("\\", "\\\\"), language, null);
+                flag = true;
+            }
             CombyMatch cm = new Gson().fromJson(result, CombyMatch.class);
-
             if(cm != null) {
                 cm.getMatches().forEach(c -> c.setMatched(c.getMatched().replace("\\\"", "\"")));
+                if (flag)
+                    cm.getMatches().forEach(c -> c.setMatched(c.getMatched().replace("\\\\", "\\")));
             }
 
             return Optional.ofNullable(cm);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return Optional.empty();
         }
@@ -81,7 +88,9 @@ public class CombyUtils {
     public static boolean isPerfectMatch(String source, CombyMatch cm) {
         return cm.getMatches().size() == 1
                 && cm.getMatches().get(0).getMatched().replace("\\n","")
-                .equals(source.replace("\\\"", "\"").replace("\\n",""));
+                .equals(source.replace("\\\"", "\"")
+//                        .replace("\\\\","\\")
+                        .replace("\\n",""));
 
     }
 

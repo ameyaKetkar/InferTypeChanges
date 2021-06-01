@@ -25,7 +25,7 @@ GeneralDictsTemplate = env.get_template("GeneralDictionariesTemplate.html")
 
 
 def apply_template_to(write_to_file, data):
-    with open(os.path.join(write_to_file), 'w+') as fh: 
+    with open(os.path.join(write_to_file), 'w+') as fh:
         fh.write(GeneralDicts(data))
         fh.close()
 
@@ -36,7 +36,8 @@ def json_to_html(json_data):
 
 def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
     if forWhat == 'Statement Mappings':
-        colNames = ['Match', 'Replace', 'Instances', 'isVeryGood','isGood','Relevant Instances', 'Commits', 'Project', 'Link']
+        colNames = ['Match', 'Replace', 'Instances', 'isVeryGood', 'isGood', 'Relevant Instances', 'Commits', 'Project',
+                    'Link']
         col_types = '[\'string\',\'string\', \'number\', \'boolean\', \'boolean\', \'number\', \'number\',\'number\',\'string\']'
         Title = 'Mapping Summary for ' + str(typeChange)
         body = []
@@ -45,7 +46,7 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
 
         apply_template_to(htmlPage, (colNames, body, Title, col_types, "../.."))
     if forWhat == 'Type Change Summary':
-        colNames = ['Before Type', 'After Type','Very Good Mappings','Good Mappings', 'Mappings']
+        colNames = ['Before Type', 'After Type', 'Very Good Mappings', 'Good Mappings', 'Mappings']
         col_types = '[\'string\',\'string\', \'number\', \'number\', \'number\']'
         Title = 'TypeChange Summary'
         body = []
@@ -56,11 +57,11 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
 
 excludeTcs = [('java.lang.String', 'java.util.Optional<:[tar]>')]
 
-res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsRemote"
+res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsTest"
 if not os.path.exists(res):
     os.mkdir(res)
 
-with open(os.path.join(parent(res), "output.jsonl")) as c:
+with open(os.path.join(parent(res), "test.jsonl")) as c:
     lines = c.readlines()
     mappings = [json.loads(l) for l in lines if l != '\n']
     tcTemplate_mapping = {}
@@ -85,14 +86,16 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
             print(i)
             mapping_id = 'Mapping-' + str(i)
             mapping_details = os.path.join(typeChangeFolder, mapping_id + ".html")
-            mappingSummary[mapping_id] = {'Match': html.escape(matchReplace[0]), 'Replace': html.escape(matchReplace[1]),
+            mappingSummary[mapping_id] = {'Match': html.escape(matchReplace[0]),
+                                          'Replace': html.escape(matchReplace[1]),
                                           'Instances': len(instances),
-                                          'Relevant Instances': len([i for i in instances if i['isRelevant'] != 'Not Relevant']),
+                                          'Relevant Instances': len(
+                                              [i for i in instances if i['isRelevant'] != 'Not Relevant']),
                                           'Commits': len({inst['Commit'] for inst in instances}),
                                           'Project': len({inst['Project'] for inst in instances}),
                                           'Link': "<a href=" + mapping_details + ">Link</a>"}
-            mappingSummary[mapping_id]['isGood'] = any(i for i in instances if i['isRelevant']) and mappingSummary[mapping_id]['Commits'] > 1
-            mappingSummary[mapping_id]['isVeryGood'] = any(i for i in instances if i['isRelevant']) and mappingSummary[mapping_id]['Project'] > 1
+            mappingSummary[mapping_id]['isGood'] = mappingSummary[mapping_id]['Commits'] > 1
+            mappingSummary[mapping_id]['isVeryGood'] = mappingSummary[mapping_id]['Project'] > 1
 
             if mappingSummary[mapping_id]['isVeryGood']:
                 veryGoodMappingCounter += 1
@@ -111,7 +114,7 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
 
         typeChangeSummary[typeChangeID] = {'Before Type': html.escape(typeChange[0]),
                                            'After Type': html.escape(typeChange[1]),
-                                           'Good Mappings' : goodMappingCounter,
+                                           'Good Mappings': goodMappingCounter,
                                            'Very Good Mappings': veryGoodMappingCounter,
                                            'Mappings': "<a href=" + mappingSummaryPath + ">" + str(
                                                len(mappings)) + "</a>"}
