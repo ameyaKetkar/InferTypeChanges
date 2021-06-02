@@ -9,7 +9,6 @@ import io.vavr.Tuple2;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import logging.MyLogger;
-import org.refactoringminer.RMinerUtils.Response;
 import org.refactoringminer.RMinerUtils.TypeChange;
 import type.change.treeCompare.GetUpdate;
 import type.change.treeCompare.Update;
@@ -22,10 +21,10 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.isNotWorthLearning;
-import static Utilities.ResolveTypeUtil.getResolvedTypeChangeTemplate;
 import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 import static org.refactoringminer.RMinerUtils.generateUrl;
@@ -38,11 +37,10 @@ public class Infer {
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     public static Path pathToResolvedCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponses");
 
-
     public static void main(String[] args) throws IOException {
         MyLogger.setup();
         Path inputFile = Path.of(args[0]);
-        Path outputFile  = Path.of(args[1]);
+        Path outputFile = Path.of(args[1]);
 
         Set<String> analyzedCommits = Files.exists(outputFile) ?
                 Files.readAllLines(outputFile).stream()
@@ -63,19 +61,20 @@ public class Infer {
 
 //        if(!commit.startsWith("e7aa7e909a370a54613e86592d58219c7326faaf"))
 //            return CompletableFuture.completedFuture(null);
+        System.out.println("Analyzing : " + commit + " " + repoName);
 
         return CompletableFuture.supplyAsync(() -> //Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoCloneURL, commit)))
                 Either.right(Try.of(() -> Files.readString(pathToResolvedCommits.resolve(commit + ".json"))).toJavaOptional())
-                .filterOrElse(Optional::isPresent, x-> "REFACTORING MINER RESPONSE IS EMPTY !!!!! ").map(Optional::get))
+                        .filterOrElse(Optional::isPresent, x -> "REFACTORING MINER RESPONSE IS EMPTY !!!!! ").map(Optional::get))
                 .thenApply(response -> response.map(x -> new Gson().fromJson(response.get(), GenerateResolvedResponse.ResolvedResponse.class))
-                        .filterOrElse(r -> r != null && r.commits != null,r -> "REFACTORING MINER RESPONSE IS EMPTY !!!!! "))
+                        .filterOrElse(r -> r != null && r.commits != null, r -> "REFACTORING MINER RESPONSE IS EMPTY !!!!! "))
                 .thenCompose(response -> {
                     if (response.isEmpty()) {
                         System.out.println(response.getLeft());
                         return CompletableFuture.completedFuture(null);
                     }
                     List<TypeChange> allRefactorings = response.get().commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList());
-                    if(allRefactorings.isEmpty()){
+                    if (allRefactorings.isEmpty()) {
                         System.out.println("No Refactorings found!");
                         return CompletableFuture.completedFuture(null);
                     }
@@ -89,27 +88,27 @@ public class Infer {
                     Map<Tuple2<String, String>, Tuple2<String, String>> typeChange_template = response.get().getResolvedTypeChanges().stream()
                             .collect(toMap(Tuple2::_1, Tuple2::_2));
 
-                    CompletableFuture[] xx = allRefactorings.stream().filter(x -> x.getB4Type() != null).flatMap(rfctr -> {
-                        Tuple2<String, String> typeChange = Tuple.of(rfctr.getB4Type(), rfctr.getAfterType());
-                        if (!typeChange_template.containsKey(typeChange)) {
-                            System.out.println("COULD NOT CAPTURE THE TYPE CHANGE PATTERN FOR " + rfctr.getB4Type() + "    " + rfctr.getAfterType());
-                            return Stream.empty();
-                        }
-                        return getAsCodeMapping(repoCloneURL, rfctr, commit).stream().filter(x -> !isNotWorthLearning(x))
+                    CompletableFuture[] xx = allRefactorings.stream()
+                            .filter(x -> Set.of("TYPE", "Type").contains(x.getRefactoringKind()))
+                            .filter(typeChange -> typeChange_template.containsKey(Tuple.of(typeChange.getB4Type(), typeChange.getAfterType())))
+                            .flatMap(typeChange -> {
+                                Tuple2<String, String> typeChangeStr = Tuple.of(typeChange.getB4Type(), typeChange.getAfterType());
+                                return getAsCodeMapping(repoCloneURL, typeChange, commit).stream().filter(x -> !isNotWorthLearning(x))
 //                                .filter(x -> x.getAfter().contains("artifactsExtractDir.resolve(distribution.getFileExtension())"))
-                                .map(x -> CompletableFuture.supplyAsync(() -> inferTransformation(x, rfctr, allRenames, commit))
-                                        .thenApply(ls -> ls.stream().map(a -> new Gson()
-                                                .toJson(new InferredMappings(typeChange_template.get(typeChange), a), InferredMappings.class))
-                                                .collect(joining("\n")))
-                                        .thenAccept(s -> RWUtils.FileWriterSingleton.inst.getInstance()
-                                                .writeToFile(s, outputFile)));
-                    }).toArray(CompletableFuture[]::new);
+                                        .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit))
+                                                .thenApply(updates -> updates.stream().map(a -> new Gson()
+                                                        .toJson(new InferredMappings(typeChange_template.get(typeChangeStr), a), InferredMappings.class))
+                                                        .collect(joining("\n")))
+                                                .thenAccept(inferredMapping -> RWUtils.FileWriterSingleton.inst.getInstance()
+                                                        .writeToFile(inferredMapping, outputFile)));
+                            }).toArray(CompletableFuture[]::new);
 
                     return CompletableFuture.allOf(xx);
                 });
     }
 
     public static List<CodeMapping> getAsCodeMapping(String url, TypeChange tc, String commit) {
+
         return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder().setB4(sm.getBeforeStmt())
                 .setAfter(sm.getAfterStmt()).setIsSame(sm.isSimilar())
                 .addAllReplcementInferred(sm.getReplacements().stream()
@@ -153,7 +152,7 @@ public class Infer {
             LOGGER.info("TOO LARGE!!!");
             return explainableUpdates;
         }
-        System.out.println("Analyzing : " + commit);
+
         System.out.println(String.join("\n->\n", stmtB4, stmtAftr));
 
         GetUpdate gu = new GetUpdate(codeMapping, typeChange, commit);

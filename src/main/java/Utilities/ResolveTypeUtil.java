@@ -1,18 +1,16 @@
 package Utilities;
 
-import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Try;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.PerfectMatch;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static Utilities.CaptureMappingsLike.SYNTACTIC_TYPE_CHANGES;
@@ -24,27 +22,43 @@ import static org.refactoringminer.RMinerUtils.*;
 
 public class ResolveTypeUtil {
 
+    public static Set<String> allJavaClasses;
+
+    private static Map<String, String> allJavaLangClasses;
+
+    static {
+        try {
+            allJavaClasses = new HashSet<>(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaClasses.txt")));
+            allJavaLangClasses = Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaLangClasses.txt"))
+                    .stream().collect(toMap(x -> {
+                        var spl = x.split("\\.");
+                        return spl[spl.length -1 ];
+                    }, x -> x));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public static Optional<Tuple2<String, String>> getResolvedTypeChangeTemplate(Tuple2<String, String> reportedTypeChange, List<TypeChange> typeChanges) {
 
-        Function<String, Optional<PerfectMatch>> matchType = t -> SYNTACTIC_TYPE_CHANGES.entrySet().stream()
+        return Optional.of(reportedTypeChange)
+                .map(x -> x.map(ResolveTypeUtil::toPerfectMatch, ResolveTypeUtil::toPerfectMatch))
+                .filter(m -> m._1().isPresent() && m._2().isPresent())
+                .flatMap(m -> Try.of(() -> new MatchReplace(m._1().get(), m._2().get(), "***"))
+                    .onFailure(x -> {
+                        System.out.println(reportedTypeChange);
+                        x.printStackTrace();
+                    }).toJavaOptional())
+                .map(x -> tryToResolveTypes(x, typeChanges));
+    }
+
+    private static Optional<PerfectMatch> toPerfectMatch(String t) {
+        return SYNTACTIC_TYPE_CHANGES.entrySet().stream()
                 .flatMap(x -> getPerfectMatch(x.getValue(), t, ".xml")
                         .map(y -> new PerfectMatch(x.getKey(), x.getValue()._1(), y.getMatches().get(0)))
                         .stream())
                 .findFirst();
-
-        var matchedTypeSyntax = reportedTypeChange.map(matchType, matchType);
-
-        if (matchedTypeSyntax._1().isEmpty() || matchedTypeSyntax._2().isEmpty())
-            return Optional.empty();
-        try {
-            MatchReplace expl = new MatchReplace(matchedTypeSyntax._1().get(), matchedTypeSyntax._2().get(), "***");
-            Tuple2<String, String> enrichedMatchReplace = tryToresolveTypes(expl, typeChanges);
-            return Optional.of(enrichedMatchReplace);
-        }catch (Exception e){
-            e.printStackTrace();
-            return Optional.empty();
-        }
     }
 
     private static Map<String, String> getTypeNames(Map<String, String> unMatched, String template){
@@ -54,28 +68,23 @@ public class ResolveTypeUtil {
                 .collect(toMap(Entry::getKey, Entry::getValue));
     }
 
-    private static Tuple2<String, String> tryToresolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {
+    private static Tuple2<String, String> tryToResolveTypes(MatchReplace expl, List<TypeChange> typeChanges) {
 
-        Tuple2<String, String> matchReplace = expl.getMatchReplace();
-
-        Map<String, String> tvMapB4 = getTypeNames(expl.getUnMatchedBefore(), matchReplace._1());
-        Map<String, String> tvMapAfter = getTypeNames(expl.getUnMatchedAfter(), matchReplace._2());
+        Map<String, String> tvMapB4 = getTypeNames(expl.getUnMatchedBefore(), expl.getMatchReplace()._1());
+        Map<String, String> tvMapAfter = getTypeNames(expl.getUnMatchedAfter(), expl.getMatchReplace()._2());
 
         Map<Boolean, List<String>> relevantImportsB4 = typeChanges.stream()
                 .flatMap(x -> Stream.concat(x.getRemovedImportStatements().stream(), x.getUnchangedImportStatements().stream()))
                 .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
-
-        Map<String, String> c1 = resolveTypeNames(tvMapB4, relevantImportsB4);
+        Map<String, String> resolvedTypeNamesBefore = resolveTypeNames(tvMapB4, relevantImportsB4);
 
         Map<Boolean, List<String>> relevantImportsAfter = typeChanges.stream()
-                .flatMap(x -> Stream.concat(x.getAddedImportStatements().stream(), x.getUnchangedImportStatements().stream()))
+                .flatMap(typeChange -> Stream.concat(typeChange.getAddedImportStatements().stream(), typeChange.getUnchangedImportStatements().stream()))
                 .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
+        Map<String, String> resolvedTypeNamesAfter = resolveTypeNames(tvMapAfter, relevantImportsAfter);
 
-        Map<String, String> c2 = resolveTypeNames(tvMapAfter, relevantImportsAfter);
-
-        Tuple2<String, String> s = expl.getMatchReplace().map(x -> performRenameIdentifier(x, c1), x -> performRenameIdentifier(x, c2));
-
-        return s;
+        return expl.getMatchReplace().map(x -> performRenameIdentifier(x, resolvedTypeNamesBefore),
+                x -> performRenameIdentifier(x, resolvedTypeNamesAfter));
 
     }
 
@@ -99,21 +108,14 @@ public class ResolveTypeUtil {
                 .or(() -> findInBuiltInJava(relevantImports.getOrDefault(false, new ArrayList<>()), tv_value));
     }
 
-    private static Optional<String> findInBuiltInJava(List<String> packages, Entry<String, String> b) {
-        Optional<String> response = Try.of(() -> HttpUtils.makeHttpRequest(Map.of("purpose", "Resolve", "lookup", b.getValue(), "packages",
-                String.join(",", packages)))).getOrElse(Optional.empty())
-                .map(x -> new Gson().fromJson(x, ResolveResponse.class).QualifiedName)
-                .filter(x -> !x.isEmpty());
-        return response;
+    private static Optional<String> findInBuiltInJava(List<String> packages, Entry<String, String> lookupEntry) {
+        return Optional.ofNullable(allJavaLangClasses.getOrDefault(lookupEntry.getValue(), null))
+                .or(() -> packages.stream().map(x -> x + "." + lookupEntry.getValue()).filter(x -> allJavaClasses.contains(x)).findFirst());
     }
 
     private static Optional<String> isPrimitive(Entry<String, String> b) {
         return SYNTACTIC_TYPE_CHANGES.entrySet().stream().filter(x -> x.getKey().startsWith("prim"))
                 .flatMap(x -> getPerfectMatch(x.getValue(), b.getValue(), null)
                         .map(y -> b.getValue()).stream()).findFirst();
-    }
-
-    public static class ResolveResponse {
-        public String QualifiedName;
     }
 }
