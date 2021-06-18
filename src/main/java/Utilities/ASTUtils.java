@@ -176,14 +176,11 @@ public class ASTUtils {
 
 
     public static Stream<Tree> getChildren(Tree root1) {
-//        if(root1.getChildren().size() == 1){
-//            Tree onlyChild = root1.getChildren().get(0);
-//            if(onlyChild.getPos()==root1.getPos() && onlyChild.getEndPos() == root1.getEndPos())
-//                return getChildren(onlyChild);
-//        }
         return root1.getChildren().stream()
                 .flatMap(c -> {
                     if (c.getType().name.equals("METHOD_INVOCATION_ARGUMENTS"))
+                        return c.getChildren().stream();
+                    if(c.getType().name.equals("VariableDeclarationFragment"))
                         return c.getChildren().stream();
                     return Stream.of(c);
                 });
@@ -274,9 +271,18 @@ public class ASTUtils {
         return Optional.empty();
     }
 
+    public static boolean isNotWorthLearningOnlyStrings(CodeMapping cm){
+        return cm.getIsSame() || cm.getReplcementInferredList().stream().allMatch(x ->
+//                (x.getReplacementType().equals("VARIABLE_NAME"))
+             x.getReplacementType().equals("STRING_LITERAL")
+        );
+    }
+
     public static boolean isNotWorthLearning(CodeMapping cm){
-        return cm.getIsSame() || cm.getReplcementInferredList().stream().allMatch(x -> x.getReplacementType().equals("VARIABLE_NAME")
-                || x.getReplacementType().equals("STRING_LITERAL"));
+        return cm.getIsSame() || cm.getReplcementInferredList().stream().allMatch(x ->
+                (x.getReplacementType().equals("VARIABLE_NAME")) ||
+                        x.getReplacementType().equals("STRING_LITERAL")
+        );
     }
 
     public static <T> List<T>  mergeList (List<T> l1, List<T> l2){

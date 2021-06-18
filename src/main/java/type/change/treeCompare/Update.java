@@ -46,6 +46,8 @@ public class Update {
     }
 
     public static Stream<Update> getAllDescendants(Update u){
+        if(u == null || u.getSubUpdates() == null)
+            return Stream.empty();
         return u.getSubUpdates().stream().flatMap(x -> Stream.concat(Stream.of(x), getAllDescendants(x)));
     }
 

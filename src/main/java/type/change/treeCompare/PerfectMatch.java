@@ -15,6 +15,7 @@ import type.change.T2RLearnerException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static Utilities.CaptureMappingsLike.*;
 import static Utilities.CombyUtils.*;
@@ -32,7 +33,7 @@ public class PerfectMatch {
         Name = name;
         Template = template;
         Match = match;
-        CodeSnippet = match.getMatched();
+        CodeSnippet = match.getMatched().replace("\n","");
         Map<String, String> mergeSameValuedTemplateVars = getTemplateVariablesWithSameValue();
         if(!mergeSameValuedTemplateVars.isEmpty())
             rename(mergeSameValuedTemplateVars);
@@ -77,7 +78,7 @@ public class PerfectMatch {
     public static Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> generalize(PerfectMatch before, PerfectMatch after){
         Map<String, List<String>> intersection = getIntersection(before, after);
         Map<String, String> afterNameBeforeName = intersection.entrySet().stream().flatMap(x -> x.getValue().stream().map(y -> Tuple.of(y, x.getKey())))
-                .collect(toMap(x -> x._1(), x -> x._2()));
+                .collect(toMap(Tuple2::_1, Tuple2::_2, (a, b)->a));
         Tuple2<PerfectMatch, PerfectMatch> t1 = safeRename(before, after, afterNameBeforeName);
         return t1.concat(Tuple.of(getIntersection(t1._1(), t1._2())));
     }
@@ -85,7 +86,7 @@ public class PerfectMatch {
     private static Tuple2<PerfectMatch, PerfectMatch> safeRename(PerfectMatch before, PerfectMatch after, Map<String, String> afterNameBeforeName) {
         Map<String, String> templateVariableMapping = after.getTemplateVariableMapping();
         // conflict check
-        List<String> conflictingBeforeNames = afterNameBeforeName.values().stream()
+        List<String> conflictingBeforeNames = Stream.concat(afterNameBeforeName.values().stream(),afterNameBeforeName.keySet().stream())
                 .filter(templateVariableMapping::containsKey)
                 .collect(toList());
 
@@ -96,7 +97,7 @@ public class PerfectMatch {
                         .contains(x.getValue()) ? addSuffix.apply(x.getValue()): x.getValue()));
 
         Map<String, String> beforeNameNewBeforeName = conflictingBeforeNames.stream()
-                .collect(toMap(x -> x, addSuffix));
+                .collect(toMap(x -> x, addSuffix, (a,b) -> a));
 
         after.rename(afterNameBeforeName);
 

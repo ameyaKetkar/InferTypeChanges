@@ -31,7 +31,7 @@ public class CaptureMappingsLike {
         else if(n.getNodeType() == ASTNode.INFIX_EXPRESSION)
             return ((InfixExpression) n).getLeftOperand().toString();
         else if(n.getNodeType() == ASTNode.VARIABLE_DECLARATION_FRAGMENT)
-            return ((VariableDeclarationFragment) n).getInitializer().toString();
+            return (((VariableDeclarationFragment) n).getInitializer() == null)? "": ((VariableDeclarationFragment) n).getInitializer().toString();
         else if(n.getNodeType() == ASTNode.POSTFIX_EXPRESSION)
             return ((PostfixExpression)n).getOperand().toString();
         else if(n.getNodeType() == ASTNode.PREFIX_EXPRESSION)

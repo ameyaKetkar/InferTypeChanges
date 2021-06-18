@@ -9,6 +9,12 @@ python AdvancedServer.py "/Users/ameya/Research/TypeChangeStudy/VanillaRMiner/Re
 //./RefactoringMiner -c /Users/ameya/Research/TypeChangeStudy/Corpus/Project_neo4j/neo4j 77a5e62f9d5a56a48f82b6bdd8519b18275bef1d -json /Users/ameya/Research/TypeChangeStudy/VanillaRMiner/output.json
 
 
+//
+//            zip(getChildren(root1), getChildren(root2), Tuple::of).forEach(t -> {
+//                if (!t._1().isIsomorphicTo(t._2()))
+//                    getCoveringNode(before, t._1()).flatMap(x -> getCoveringNode(after, t._2()).map(y -> Tuple.of(x, y)))
+//                            .ifPresent(x -> upd.addSubExplanation(getUpdate(x._1(), x._2(), t._1(), t._2())));
+//            });
 
 
 

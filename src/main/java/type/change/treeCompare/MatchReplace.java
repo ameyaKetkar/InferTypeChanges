@@ -35,12 +35,8 @@ public class MatchReplace {
 
     public MatchReplace(PerfectMatch beforep, PerfectMatch afterp, String beforeName) throws T2RLearnerException {
         Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> generalization = getGeneralization(beforep, afterp, beforeName);
-//
-//        generalization = generalization.update3(getIntersection(generalization._1(), generalization._2()));
-
         var generalizedMatchAfter = generalization._2();
         var generalizedMatchBefore = generalization._1();
-
         this.Generalizations = generalizedMatchBefore.getTemplateVariableMapping().entrySet()
                 .stream().filter(x -> !x.getKey().endsWith("c") && generalization._3().containsKey(x.getKey()))
                 .collect(toMap(Entry::getKey, Entry::getValue));
@@ -51,15 +47,12 @@ public class MatchReplace {
         this.UnMatchedAfter = notInGeneralization(generalizedMatchAfter.getTemplateVariableMapping());
         this.UnMatchedAfterRange = UnMatchedAfter.keySet().stream()
                 .collect(toMap(x -> x, x -> generalizedMatchAfter.getTemplateVariableMappingRange().get(x)));
-        this.Replace = specialize(generalizedMatchAfter, UnMatchedAfter);
-
-
-
-
-
+         this.Replace = specialize(generalizedMatchAfter, UnMatchedAfter);
     }
 
-    private Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> getGeneralization(PerfectMatch beforep, PerfectMatch afterp, String beforeName) throws T2RLearnerException {
+    private Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> getGeneralization(PerfectMatch beforep,
+                                                                                            PerfectMatch afterp,
+                                                                                            String beforeName) throws T2RLearnerException {
         Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> generalization = generalize(beforep, afterp);
 
         Optional<Either<String, String>> wrapUnWrap = isWrapUnWrap(generalization._1(), generalization._2());

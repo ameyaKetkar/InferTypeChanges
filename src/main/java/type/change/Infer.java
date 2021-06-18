@@ -9,6 +9,7 @@ import io.vavr.Tuple2;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import logging.MyLogger;
+import org.refactoringminer.RMinerUtils;
 import org.refactoringminer.RMinerUtils.TypeChange;
 import type.change.treeCompare.GetUpdate;
 import type.change.treeCompare.Update;
@@ -20,14 +21,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.UnaryOperator;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static Utilities.ASTUtils.isNotWorthLearning;
+import static Utilities.ASTUtils.isNotWorthLearningOnlyStrings;
 import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 import static org.refactoringminer.RMinerUtils.generateUrl;
+import static org.refactoringminer.RMinerUtils.toStmtMapping;
 import static type.change.treeCompare.Update.getAllDescendants;
 
 
@@ -49,7 +54,7 @@ public class Infer {
                         .map(i -> i.getInstances().getCommit())
                         .collect(toSet()) : new HashSet<>();
 
-        CompletableFuture[] futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
+        var futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
                 .filter(x -> !analyzedCommits.contains(x[2]))
                 .map(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile))
                 .toArray(CompletableFuture[]::new);
@@ -58,9 +63,6 @@ public class Infer {
     }
 
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile) {
-
-//        if(!commit.startsWith("e7aa7e909a370a54613e86592d58219c7326faaf"))
-//            return CompletableFuture.completedFuture(null);
         System.out.println("Analyzing : " + commit + " " + repoName);
 
         return CompletableFuture.supplyAsync(() -> //Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoCloneURL, commit)))
@@ -80,8 +82,7 @@ public class Infer {
                     }
                     Set<Tuple2<String, String>> allRenames = allRefactorings.stream()
                             .filter(x -> x.getB4Type() != null)
-                            .filter(x -> !x.getRefactoringKind().equals("Change Return Type") &&
-                                    !x.getRefactoringKind().equals("CHANGE_RETURN_TYPE"))
+                            .filter(x -> !x.getRefactoringKind().equals("CHANGE_RETURN_TYPE"))
                             .filter(r -> !r.getBeforeName().equals(r.getAfterName()))
                             .map(r -> Tuple.of(r.getBeforeName(), r.getAfterName())).collect(toSet());
 
@@ -89,12 +90,12 @@ public class Infer {
                             .collect(toMap(Tuple2::_1, Tuple2::_2));
 
                     CompletableFuture[] xx = allRefactorings.stream()
-                            .filter(x -> Set.of("TYPE", "Type").contains(x.getRefactoringKind()))
+                            .filter(x -> x.getRefactoringKind().contains("TYPE"))
                             .filter(typeChange -> typeChange_template.containsKey(Tuple.of(typeChange.getB4Type(), typeChange.getAfterType())))
                             .flatMap(typeChange -> {
                                 Tuple2<String, String> typeChangeStr = Tuple.of(typeChange.getB4Type(), typeChange.getAfterType());
-                                return getAsCodeMapping(repoCloneURL, typeChange, commit).stream().filter(x -> !isNotWorthLearning(x))
-//                                .filter(x -> x.getAfter().contains("artifactsExtractDir.resolve(distribution.getFileExtension())"))
+                                return getAsCodeMapping(repoCloneURL, typeChange, commit).stream().filter(x -> !isNotWorthLearningOnlyStrings(x))
+//                                        .filter(x->x.getAfter().contains("gateway."))
                                         .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit))
                                                 .thenApply(updates -> updates.stream().map(a -> new Gson()
                                                         .toJson(new InferredMappings(typeChange_template.get(typeChangeStr), a), InferredMappings.class))
@@ -102,21 +103,52 @@ public class Infer {
                                                 .thenAccept(inferredMapping -> RWUtils.FileWriterSingleton.inst.getInstance()
                                                         .writeToFile(inferredMapping, outputFile)));
                             }).toArray(CompletableFuture[]::new);
-
                     return CompletableFuture.allOf(xx);
                 });
     }
 
+    public static Stream<String> getAllStringLiterals(String s){
+//        boolean valid = input.matches("\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\"");
+        Pattern pattern = Pattern.compile("\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\"");
+        Matcher matcher = pattern.matcher(s);
+        return matcher.results().map(x->x.group());
+    }
+
+    public static String normalizeStrLit(String codeSnippet, RMinerUtils.Statement_Mapping sm){
+
+        List<String> literals = Stream.concat(getAllStringLiterals(sm.getBeforeStmt()), getAllStringLiterals(sm.getAfterStmt()))
+                .collect(toList());;
+        Map<String, String> literalsMap = IntStream.range(0, literals.size()).boxed().collect(toMap(x -> literals.get(x), x -> "STR" + x));
+
+        UnaryOperator<String> normalizeStLit = s -> {
+            var x= s;
+            for(var l : literalsMap.entrySet()){
+                x = x.replace(l.getKey(), l.getValue());
+            }
+            return x;
+        };
+
+        return normalizeStLit.apply(codeSnippet);
+
+    }
+
     public static List<CodeMapping> getAsCodeMapping(String url, TypeChange tc, String commit) {
 
-        return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder().setB4(sm.getBeforeStmt())
-                .setAfter(sm.getAfterStmt()).setIsSame(sm.isSimilar())
+        return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder()
+                .setB4(normalizeStrLit(sm.getBeforeStmt(), sm))
+                .setAfter(normalizeStrLit(sm.getAfterStmt(), sm))
+                .setIsSame(sm.isSimilar())
                 .addAllReplcementInferred(sm.getReplacements().stream()
                         .map(x -> ReplacementInferred.newBuilder().setReplacementType(x).build())
                         .collect(toList()))
                 .setUrlbB4(generateUrl(sm.getLocationInfoBefore(), url, commit, "L"))
                 .setUrlAftr(generateUrl(sm.getLocationInfoAfter(), url, commit, "R")).build())
                 .collect(toList());
+    }
+
+
+    private static String normalizeStringLiterals(String s){
+        return s.replaceAll("\".*\"","");
     }
 
     private static List<Update> inferTransformation(CodeMapping codeMapping, TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit) {
@@ -136,6 +168,7 @@ public class Infer {
 
         var stmt_b = ASTUtils.getStatement(stmtB4.replace("\n", ""));
         var stmt_a = ASTUtils.getStatement(stmtAftr.replace("\n", ""));
+
 
         if (stmt_a.isEmpty() || stmt_b.isEmpty())
             return new ArrayList<>();
