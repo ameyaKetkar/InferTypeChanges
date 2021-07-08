@@ -17,6 +17,9 @@ public class Infer {
         if ("-s".equals(args[0])) {
             SnippetMode.snippetMode(args);
         }
+        if ("-f".equals(args[0])) {
+            FullMode.fullMode(args);
+        }
     }
 
 

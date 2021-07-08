@@ -4,11 +4,20 @@ import Utilities.*;
 import com.google.gson.Gson;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
+import com.t2r.common.utilities.GitUtil;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
+import org.eclipse.jgit.api.Git;
 import org.refactoringminer.RMinerUtils;
+import org.refactoringminer.RefactoringMiner;
+import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.GitService;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringHandler;
+import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
+import org.refactoringminer.util.GitServiceImpl;
 import type.change.treeCompare.GetUpdate;
 import type.change.treeCompare.Update;
 import type.change.visitors.NodeCounter;
@@ -29,15 +38,15 @@ import static java.util.stream.Collectors.*;
 import static org.eclipse.jdt.core.dom.ASTNode.nodeClassForType;
 import static type.change.treeCompare.Update.getAllDescendants;
 
-public class CommitMode {
+public class FullMode {
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-    static void commitMode(String[] args) throws IOException {
+    static void fullMode(String[] args) throws IOException {
 
         Path inputFile = Path.of(args[1]);
-        Path outputFile = Path.of(args[2]);
-        Path pathToResolvedCommits = Paths.get(args[3]);
+        Path outputFolder = Path.of(args[2]);
+        Path pathToCorpus = Paths.get(args[3]);
         ResolveTypeUtil.allJavaClasses = new HashSet<>(Files.readAllLines(Paths.get(args[4])));
         ResolveTypeUtil.allJavaLangClasses = Files.readAllLines(Paths.get(args[5]))
                 .stream().collect(toMap(x -> {
@@ -45,18 +54,53 @@ public class CommitMode {
                     return spl[spl.length - 1];
                 }, x -> x, (a, b) -> a));
 
-        Set<String> analyzedCommits = Files.exists(outputFile) ?
-                Files.readAllLines(outputFile).stream()
-                        .filter(x -> !x.isEmpty())
-                        .map(x -> new Gson().fromJson(x, InferredMappings.class))
-                        .map(i -> i.getInstances().getCommit())
-                        .collect(toSet()) : new HashSet<>();
+//        Set<String> analyzedCommits = Files.exists(outputFile) ?
+//                Files.readAllLines(outputFile).stream()
+//                        .filter(x -> !x.isEmpty())
+//                        .map(x -> new Gson().fromJson(x, InferredMappings.class))
+//                        .map(i -> i.getInstances().getCommit())
+//                        .collect(toSet()) : new HashSet<>();
 
         var futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
-                .filter(x -> !analyzedCommits.contains(x[2]))
-                .map(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile, pathToResolvedCommits))
+//                .filter(x -> !analyzedCommits.contains(x[2]))
+                .map(commit -> fullyAnalyzeCommit(commit[0], commit[1], commit[2], outputFolder, pathToCorpus))
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
+    }
+
+
+    public static class RefHandler extends RefactoringHandler {
+        private String cloneURL;
+        private String currentCommitId;
+
+        public RefHandler(String cloneURL, String currentCommitId) {
+            this.cloneURL = cloneURL;
+            this.currentCommitId = currentCommitId;
+        }
+        @Override
+        public void handle(String commitId, List<Refactoring> refactorings) {
+            RefactoringMiner.commitJSON(cloneURL, currentCommitId, refactorings);
+
+        }
+    }
+
+
+    public static void getRefactoringsJson(String repoName, String repoCloneURL, String commit, Path pathToCorpus){
+        GitService gitService = new GitServiceImpl();
+        GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+
+        Try<Git> repo = GitUtil.tryToClone(repoCloneURL, pathToCorpus.resolve("Project_" + repoName).resolve(repoName));
+        if(repo.isSuccess()){
+            RefactoringHandler r = new RefHandler(cloneURL, currentCommitId);
+            miner.detectAtCommit(repo.get().getRepository(), commit ,r, 200);
+        }
+    }
+
+    public static void fullyAnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFolder, Path pathToCorpus){
+        System.out.println("Analyzing : " + commit + " " + repoName);
+
+
+
     }
 
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile, Path pathToResolvedCommits) {
