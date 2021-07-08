@@ -60,7 +60,6 @@ public class CommitMode {
         CompletableFuture.allOf(futures).join();
     }
 
-
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile, Path pathToResolvedCommits) {
         System.out.println("Analyzing : " + commit + " " + repoName);
 
@@ -127,8 +126,6 @@ public class CommitMode {
                 .addAllReplcementInferred(sm.getReplacements().stream()
                         .map(x -> TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred.newBuilder().setReplacementType(x).build())
                         .collect(toList()))
-                .setUrlbB4(generateUrl(sm.getLocationInfoBefore(), url, commit, "L"))
-                .setUrlAftr(generateUrl(sm.getLocationInfoAfter(), url, commit, "R")).build())
                 .collect(toList());
     }
 
