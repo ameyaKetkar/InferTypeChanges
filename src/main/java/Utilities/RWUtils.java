@@ -9,12 +9,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
 public class RWUtils {
+
 
 
     public static String escapeMetaCharacters(String inputString){
@@ -23,6 +26,30 @@ public class RWUtils {
         for (int i = 0 ; i < metaCharacters.length ; i++){
             if(inputString.contains(metaCharacters[i])){
                 inputString = inputString.replace(metaCharacters[i],"\\"+metaCharacters[i]);
+            }
+        }
+        return inputString;
+    }
+
+    public static String escapeMetaCharacters(String inputString, List<String> except){
+        final String[] metaCharacters = {"\\","^","$","{","}","[","]","(",")",".","*","+","?","|","<",">","-","&","%"};
+
+        for (int i = 0 ; i < metaCharacters.length ; i++){
+            if(except.contains(metaCharacters[i]))
+                continue;
+            if(inputString.contains(metaCharacters[i])){
+                inputString = inputString.replace(metaCharacters[i],"\\"+metaCharacters[i]);
+            }
+        }
+        return inputString;
+    }
+
+    public static String unEscapeMetaCharacters(String inputString){
+        final String[] metaCharacters = {"\\","^","$","{","}","[","]","(",")",".","*","+","?","|","<",">","-","&","%"};
+
+        for (int i = 0 ; i < metaCharacters.length ; i++){
+            if(inputString.contains(metaCharacters[i])){
+                inputString = inputString.replace("\\"+metaCharacters[i],metaCharacters[i]);
             }
         }
         return inputString;

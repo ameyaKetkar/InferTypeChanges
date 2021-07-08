@@ -175,7 +175,9 @@ public class MatchReplace {
     public Map<String, String> notInGeneralization(Map<String, String> tmap) {
         return tmap.entrySet().stream().filter(x -> !Generalizations.containsKey(x.getKey())
                 && !Generalizations.containsValue(x.getKey()))
-                .collect(toMap(Entry::getKey, Entry::getValue));
+//                .map(x->x.getKey().endsWith("c") ? Tuple.of(x.getKey(), x.getValue().trim()) : Tuple.fromEntry(x))
+                .map(Tuple::fromEntry)
+                .collect(toMap(Tuple2::_1, Tuple2::_2));
 
     }
 
@@ -274,8 +276,8 @@ public class MatchReplace {
 
 
             if (newExplainationAfter.isPresent() && newMatchReplaceB4.isPresent()) {
-                PerfectMatch before = new PerfectMatch(parent.getMatch().getName() + "----" + child.getMatch().getName(), mergedB4, newMatchReplaceB4.get());
-                PerfectMatch after = new PerfectMatch(parent.getReplace().getName() + "----" + child.getReplace().getName(), mergedAfter, newExplainationAfter.get());
+                PerfectMatch before = new PerfectMatch(parent.getMatch().getName() + "----" + child.getMatch().getName(), mergedB4, newMatchReplaceB4.get(), null);
+                PerfectMatch after = new PerfectMatch(parent.getReplace().getName() + "----" + child.getReplace().getName(), mergedAfter, newExplainationAfter.get(), null);
                 return Try.of(() -> new MatchReplace(before, after, beforeName))
                         .onFailure(e -> {
                             System.out.println("******************************************************");

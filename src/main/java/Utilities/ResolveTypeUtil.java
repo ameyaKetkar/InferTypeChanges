@@ -24,39 +24,10 @@ public class ResolveTypeUtil {
 
     public static Set<String> allJavaClasses;
 
-    public static Map<Tuple2<String, String>, Tuple2<String, String>> cachedResolvedTypes= new LinkedHashMap<>() {
-        @Override
-        protected boolean removeEldestEntry(final Map.Entry eldest) {
-            return size() > 1000;
-        }
-    };
-    public static LinkedHashMap<String, PerfectMatch> cachedCombyMatches= new LinkedHashMap<>() {
-        @Override
-        protected boolean removeEldestEntry(final Map.Entry eldest) {
-            return size() > 5000;
-        }
-    };
-
-
-    private static Map<String, String> allJavaLangClasses;
-
-    static {
-        try {
-            allJavaClasses = new HashSet<>(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaClasses.txt")));
-            allJavaLangClasses = Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaLangClasses.txt"))
-                    .stream().collect(toMap(x -> {
-                        var spl = x.split("\\.");
-                        return spl[spl.length -1 ];
-                    }, x -> x, (a,b)->a));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+    public static Map<String, String> allJavaLangClasses;
 
 
     public static Optional<Tuple2<String, String>> getResolvedTypeChangeTemplate(Tuple2<String, String> reportedTypeChange, List<TypeChange> typeChanges) {
-        if(cachedResolvedTypes.containsKey(reportedTypeChange))
-            return Optional.ofNullable(cachedResolvedTypes.get(reportedTypeChange));
 
         Optional<Tuple2<String, String>> resolvedTypeChanges = Optional.of(reportedTypeChange)
                 .map(x -> x.map(ResolveTypeUtil::toPerfectMatch, ResolveTypeUtil::toPerfectMatch))
@@ -68,19 +39,19 @@ public class ResolveTypeUtil {
                         }).toJavaOptional())
                 .map(x -> tryToResolveTypes(x, typeChanges));
         
-        resolvedTypeChanges.ifPresent(stringStringTuple2 -> cachedResolvedTypes.put(reportedTypeChange, stringStringTuple2));
+//        resolvedTypeChanges.ifPresent(stringStringTuple2 -> cachedResolvedTypes.put(reportedTypeChange, stringStringTuple2));
         return resolvedTypeChanges;
     }
 
     private static Optional<PerfectMatch> toPerfectMatch(String t) {
-        if(cachedCombyMatches.containsKey(t))
-            return Optional.of(cachedCombyMatches.get(t));
+//        if(cachedCombyMatches.containsKey(t))
+//            return Optional.of(cachedCombyMatches.get(t));
         Optional<PerfectMatch> prft_match = SYNTACTIC_TYPE_CHANGES.entrySet().stream()
                 .flatMap(x -> getPerfectMatch(x.getValue(), t, ".xml")
-                        .map(y -> new PerfectMatch(x.getKey(), x.getValue()._1(), y.getMatches().get(0)))
+                        .map(y -> new PerfectMatch(x.getKey(), x.getValue()._1(), y.getMatches().get(0), null))
                         .stream())
                 .findFirst();
-        prft_match.ifPresent(perfectMatch -> cachedCombyMatches.put(t, perfectMatch));
+//        prft_match.ifPresent(perfectMatch -> cachedCombyMatches.put(t, perfectMatch));
         return prft_match;
     }
 

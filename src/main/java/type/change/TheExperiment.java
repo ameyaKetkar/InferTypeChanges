@@ -3,7 +3,6 @@ package type.change;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
-import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.control.Try;
@@ -25,26 +24,25 @@ import static Utilities.ASTUtils.isNotWorthLearning;
 import static java.util.stream.Collectors.*;
 import static java.util.stream.Collectors.toSet;
 import static type.change.GenerateResolvedResponse.pathToResolvedCommits;
-import static type.change.Infer.getAsCodeMapping;
+import static type.change.CommitMode.getAsCodeMapping;
 
 public class TheExperiment {
     
     
     public static void main(String a[]) throws IOException {
 
+
+
+
         List<String> testProjects = Files.readAllLines(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/testProjects.txt"))
                 .stream().map(x->x.split(",")[0]).collect(toList());
 
-
-
-        List<ResolvedResponse> allResolvedCommits = Files.list(pathToResolvedCommits)
-                .parallel()
+        List<ResolvedResponse> allResolvedCommits = Files.list(pathToResolvedCommits).parallel()
                 .filter(x->x.getFileName().toString().contains(".json"))
                 .flatMap(x -> Try.of(() -> new Gson().fromJson(Files.readString(x), ResolvedResponse.class))
-                .onFailure(Throwable::printStackTrace)
-                .toJavaOptional().stream())
+                    .onFailure(Throwable::printStackTrace)
+                    .toJavaOptional().stream())
                 .collect(Collectors.toList());
-
 
         Function<? super ResolvedResponse, Boolean> isInTest = r -> {
             String url = r.commits.get(0).repository;
@@ -55,7 +53,6 @@ public class TheExperiment {
         Map<Boolean, List<ResolvedResponse>> test_training = allResolvedCommits.stream().collect(groupingBy(isInTest));
         List<ResolvedResponse> testData = test_training.get(true);
         List<ResolvedResponse> trainingData = test_training.get(false);
-
 
         var typeChanges_testData = testData.stream().flatMap(x -> x.getResolvedTypeChanges().stream())
                 .collect(toSet());

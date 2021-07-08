@@ -11,7 +11,7 @@ Algorithm.py
 /venv/
 
 lib/
-
+ResolvedResponsesOld/
 Input/input.txt
 
 src/main/python/scripts/__pycache__/
@@ -22,3 +22,10 @@ Deploy.py
 
 Input/TypeChangeCommits.json
 ResolvedResponses/
+Input/inputFP.txt
+
+Input/inputRemote.txt
+
+Input/analyzedOp.json
+
+*.zip

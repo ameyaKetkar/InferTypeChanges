@@ -19,6 +19,8 @@ python AdvancedServer.py "/Users/ameya/Research/TypeChangeStudy/VanillaRMiner/Re
 
 
 
+"/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponses"
+
 
 int x = 7;
 long x = 7; -> long x = 7L;

@@ -197,7 +197,8 @@ public class InferredMappings {
         }
 
         public boolean isRelevant() {
-            return !isRelevant.equals("Not Relevant");
+            return true || !isRelevant.equals("Not Relevant");
+//            return !isRelevant.equals("Not Relevant");
         }
 
         public List<String> getRelevantImports() {

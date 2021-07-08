@@ -1,14 +1,13 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
-import Utilities.comby.Range__1;
+import com.github.gumtreediff.matchers.MappingStore;
+import com.github.gumtreediff.matchers.Matcher;
+import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
-import io.vavr.Tuple;
-import io.vavr.Tuple2;
-import io.vavr.Tuple3;
-import io.vavr.Tuple4;
+import io.vavr.*;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -22,7 +21,6 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
-import static com.google.common.collect.Streams.zip;
 import static java.util.Collections.reverseOrder;
 import static java.util.Comparator.comparingInt;
 import static java.util.Map.*;
@@ -71,7 +69,7 @@ public class GetUpdate {
             var locB4 = Tuple.of(root1.getPos(), root1.getEndPos());
             reasonForNoMR_matchReplace = getMatchReplace(locB4, locAftr, before, after, typeChange.getBeforeName())
                     .filter(r -> !r.getGeneralizations().isEmpty())
-                    .getOrElse(() -> getMatchReplaceCompleteDecomposition(locB4, locAftr, before, after, typeChange.getBeforeName()))
+                    .getOrElse(() -> getMatchReplaceCompleteDecomposition(before, after, typeChange.getBeforeName()))
 
             ;
         } else reasonForNoMR_matchReplace = Either.left("Not an expression");
@@ -132,7 +130,8 @@ public class GetUpdate {
         for (var child : simplestDescendants) {
             Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getMatchReplace().get(), child.getMatchReplace().get(), beforeName, commit);
             if (m.isPresent()) upd.setMatchReplace(m.get());
-            else child.setMatchReplace(null);
+//            else
+//                child.setMatchReplace(null);
         }
     }
 
@@ -161,27 +160,31 @@ public class GetUpdate {
                 .mapToInt(e -> e.getMatchReplace().get().getGeneralizations().size())
                 .sum();
 
-        List<Tuple4<ASTNode, ASTNode, Update, Integer>> holeForEachPair = new ArrayList<>();
+        List<Tuple5<ASTNode, ASTNode, Update, Integer, Integer>> holeForEachPair = new ArrayList<>();
 
         childrenAfter.sort(Comparator.comparingInt(c -> c.toString().length()).reversed());
         childrenB4.sort(Comparator.comparingInt(c -> c.toString().length()).reversed());
 
+        int i = 0;
         for (var n1 : childrenB4) {
             if (exactMatches.containsKey(n1) || n1.toString().equals(before.toString())) continue;
-
+            int j= 0;
             for (var n2 : childrenAfter) {
                 if (exactMatches.containsValue(n2) || n2.toString().equals(after.toString())) continue;
                 Update upd = getUpdate(n1, n2);
                 if (upd == null) continue;
-                holeForEachPair.add(Tuple.of(n1, n2, upd, overlaps.applyAsInt(upd)));
+                holeForEachPair.add(Tuple.of(n1, n2, upd, overlaps.applyAsInt(upd), i-j < 0? i -j : j -i));
+                j += 1;
             }
+            i += 1;
         }
 
 
-        holeForEachPair.sort(reverseOrder(comparingInt(x -> x._4())));
+        holeForEachPair.sort(reverseOrder(Comparator.<Tuple5<ASTNode, ASTNode, Update, Integer, Integer>>comparingInt(x -> x._4())
+                .thenComparingInt(x -> x._5())));
 
         for (var e : exactMatches.entrySet()) {
-            holeForEachPair.add(0, Tuple.of(e.getKey(), e.getValue(), getUpdate(e.getKey(), e.getValue()), 1));
+            holeForEachPair.add(0, Tuple.of(e.getKey(), e.getValue(), getUpdate(e.getKey(), e.getValue()), 1,0));
         }
 
         List<Update> result = new ArrayList<>();
@@ -244,19 +247,23 @@ public class GetUpdate {
     public Update getUpdate(ASTNode before, ASTNode after) {
         Tree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
         Tree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
+
+
+//        Matcher defaultMatcher = Matchers.getInstance().getMatcher("gumtree"); // retrieves the default matcher
+//        MappingStore mappings = defaultMatcher.match(root1, root2);
+
+
         return getUpdate(before, after, root1, root2);
     }
 
     public Either<String, MatchReplace> getMatchReplace(Tuple2<Integer, Integer> loc_b4,
                                                         Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
 
-        Optional<PerfectMatch> explanationBefore = matchesB4.containsKey(loc_b4) ? matchesB4.get(loc_b4)
-                : PerfectMatch.getMatch(beforeNode);
+        Optional<PerfectMatch> explanationBefore = PerfectMatch.getMatch(beforeNode);
 //        matchesB4.put(loc_b4, explanationBefore);
         if (explanationBefore.isEmpty()) return Either.left("Could not explain Before");
 
-        Optional<PerfectMatch> explanationAfter = matchesAfter.containsKey(loc_aftr) ? matchesAfter.get(loc_aftr)
-                : PerfectMatch.getMatch(afterNode);
+        Optional<PerfectMatch> explanationAfter = PerfectMatch.getMatch(afterNode);
 
 //        matchesAfter.put(loc_aftr, explanationAfter);
 
@@ -269,6 +276,7 @@ public class GetUpdate {
 
         return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get(), beforeName))
                 .onFailure(e -> {
+                    System.out.println(this.commit);
                     System.out.println(e.toString());
                     System.out.println();
                 })
@@ -278,8 +286,7 @@ public class GetUpdate {
 
     }
 
-    public Either<String, MatchReplace> getMatchReplaceCompleteDecomposition(Tuple2<Integer, Integer> loc_b4,
-                                                                             Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
+    public Either<String, MatchReplace> getMatchReplaceCompleteDecomposition(ASTNode beforeNode, ASTNode afterNode, String beforeName) {
 
         Optional<PerfectMatch> explanationBefore = PerfectMatch.getMatch(beforeNode).map(PerfectMatch::completelyDecompose);
 
@@ -295,7 +302,10 @@ public class GetUpdate {
             return Either.left("Could not explain After");
 
         return Try.of(() -> new MatchReplace(explanationBefore.get(), explanationAfter.get(), beforeName))
-                .onFailure(e -> System.out.println(e.toString()))
+                .onFailure(e -> {
+                    System.out.println(this.commit);
+                    System.out.println(e.toString());
+                })
                 .toJavaOptional().map(Either::<String, MatchReplace>right)
                 .orElse(Either.left("Error when computing MatchReplace"));
     }

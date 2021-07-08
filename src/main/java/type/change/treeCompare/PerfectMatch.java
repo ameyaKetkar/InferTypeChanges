@@ -29,11 +29,18 @@ public class PerfectMatch {
     private final Match Match;
     private final String CodeSnippet;
 
-    public PerfectMatch(String name, String template, Match match) {
+    public String getAssistance() {
+        return assistance;
+    }
+
+    private final String assistance;
+
+    public PerfectMatch(String name, String template, Match match, String assistance) {
         Name = name;
         Template = template;
         Match = match;
         CodeSnippet = match.getMatched().replace("\n","");
+        this.assistance=assistance;
         Map<String, String> mergeSameValuedTemplateVars = getTemplateVariablesWithSameValue();
         if(!mergeSameValuedTemplateVars.isEmpty())
             rename(mergeSameValuedTemplateVars);
@@ -70,8 +77,8 @@ public class PerfectMatch {
         return renameSimilarValuedTVs;
     }
 
-    public PerfectMatch(String name, String template, CombyMatch cm){
-        this(name,template, cm.getMatches().get(0));
+    public PerfectMatch(String name, String template, CombyMatch cm, String r){
+        this(name,template, cm.getMatches().get(0),r);
     }
 
     // Renames the after to before in the after template
@@ -126,14 +133,27 @@ public class PerfectMatch {
                     .replace("[" + r.getKey() + ":", "[" + r.getValue() + ":");
         }
         Match match = Utilities.comby.Match.renamedInstance(p.getMatch(), renames);
-        return new PerfectMatch(p.getName(), template, match);
+        return new PerfectMatch(p.getName(), template, match, p.assistance);
     }
 
 
     public PerfectMatch updateTemplate(String newTemplate) throws T2RLearnerException {
         return getPerfectMatch(newTemplate, CodeSnippet, null)
+                .or(() -> {
+                    if(assistance!= null) {
+                        var a = RWUtils.unEscapeMetaCharacters(assistance);
+                        var r = Match.getTemplateVarSubstitutions().entrySet().stream()
+                                .filter(x->x.getValue().equals(a))
+                                .findFirst();
+                        if(r.isPresent()) {
+                            String nt = newTemplate.replace(":[" + r.get().getKey() + "]", ":[" + r.get().getKey() + "~" + assistance +"]");
+                            return getPerfectMatch(nt, CodeSnippet, null);
+                        }
+                    }
+                    return Optional.empty();
+                })
                 .or(() -> getPerfectMatch(newTemplate, CodeSnippet, ".xml"))
-                .map(x -> new PerfectMatch(Name, newTemplate, x))
+                .map(x -> new PerfectMatch(Name, newTemplate, x, null))
                 .orElseThrow(() -> new T2RLearnerException("Could not Update template. " + newTemplate + " did not perfectly match" + CodeSnippet));
     }
 
@@ -188,7 +208,7 @@ public class PerfectMatch {
             String tryTemplate = CombyUtils.substitute(m.Template, tv, newTemplate);
             var t = getPerfectMatch(tryTemplate,m.CodeSnippet, null);
             if(t.isPresent()){
-                m = new PerfectMatch(m.Name + "-" + decomposedTemplate.get().getName(), tryTemplate, t.get());
+                m = new PerfectMatch(m.Name + "-" + decomposedTemplate.get().getName(), tryTemplate, t.get(), null);
             }
             i-=1;
         }
@@ -205,7 +225,7 @@ public class PerfectMatch {
         String newTemplate = renamedInstance(renames, decomposedTemplate.get()).getTemplate();
         String tryTemplate = CombyUtils.substitute(Template, templateVariable, newTemplate);
         return getPerfectMatch(tryTemplate,CodeSnippet,null)
-                .map(x->new PerfectMatch(Name + "-" + decomposedTemplate.get().getName(), tryTemplate, x));
+                .map(x->new PerfectMatch(Name + "-" + decomposedTemplate.get().getName(), tryTemplate, x, null));
     }
 
     static Optional<PerfectMatch> getMatch(ASTNode astNode) {
@@ -213,15 +233,18 @@ public class PerfectMatch {
         String source = astNode.toString();
         for(var template: templatesFor){
             Optional<CombyMatch> match;
+            String r = "";
             if(template.contains(":[r]")){
-                String newTemplate = template.replace(":[r]", ":[r~" + RWUtils.escapeMetaCharacters(getTheUnBoundedTemplateVar(astNode)) + "]");
+                r = RWUtils.escapeMetaCharacters(getTheUnBoundedTemplateVar(astNode));
+                String newTemplate = template.replace(":[r]", ":[r~" + r + "]");
                 match = CombyUtils.getMatch(newTemplate, source, null);
             }
             else{
                 match = CombyUtils.getMatch(template, source, null);
             }
-            if (match.isPresent() && isPerfectMatch(source, match.get()))
-                return Optional.of(new PerfectMatch(template, template, match.get()));
+            if (match.isPresent() && isPerfectMatch(source, match.get())) {
+                return Optional.of(new PerfectMatch(template, template, match.get(), r));
+            }
         }
         return Optional.empty();
     }

@@ -20,16 +20,16 @@ import static java.util.stream.Collectors.toMap;
 
 public class GenerateResolvedResponse {
     public static Path pathToAllCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/HttpServer/RMinerAllCommits");
-    public static Path pathToResolvedCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponses");
+    public static Path pathToResolvedCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponses1");
 
     public static void main(String[] a) throws IOException {
         Path fileName_noTC = pathToResolvedCommits.getParent().resolve("NoTypeChanges.txt");
-        Set<String> noTypeChanges = new HashSet<>(Files.readAllLines(fileName_noTC));
-//        List<String> noTypeChanges = (Files.readAllLines(fileName_noTC));
+        Set<String> noTypeChanges = new HashSet<>(); //Files.readAllLines(fileName_noTC)
+
         Set<String> alreadyResolved = Files.list(pathToResolvedCommits)
                 .map(x -> x.getFileName().toString().replace(".json", "")).collect(Collectors.toSet());
         Files.walk(pathToAllCommits)
-                .filter(x -> !noTypeChanges.contains(x.getFileName().toString().replace(".json", "")))
+//                .filter(x -> !noTypeChanges.contains(x.getFileName().toString().replace(".json", "")))
                 .parallel()
                 .map(x -> Try.of(() -> {
                     ResolvedResponse gson = new Gson().fromJson(Files.readString(x), ResolvedResponse.class);

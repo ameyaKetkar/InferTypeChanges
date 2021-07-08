@@ -17,6 +17,7 @@ import org.eclipse.jdt.core.ToolFactory;
 import org.eclipse.jdt.core.compiler.IScanner;
 import org.eclipse.jdt.core.dom.*;
 import Utilities.comby.Range__1;
+import type.change.CommitMode;
 
 import java.io.IOException;
 import java.io.StreamTokenizer;
@@ -24,9 +25,11 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.UnaryOperator;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.t2r.common.utilities.PrettyPrinter.pretty;
@@ -272,10 +275,9 @@ public class ASTUtils {
     }
 
     public static boolean isNotWorthLearningOnlyStrings(CodeMapping cm){
-        return cm.getIsSame() || cm.getReplcementInferredList().stream().allMatch(x ->
-//                (x.getReplacementType().equals("VARIABLE_NAME"))
-             x.getReplacementType().equals("STRING_LITERAL")
-        );
+        return cm.getIsSame() || (cm.getReplcementInferredList().size() > 0 && cm.getReplcementInferredList().stream().allMatch(x ->
+             x.getReplacementType().equals("STRING_LITERAL")));
+
     }
 
     public static boolean isNotWorthLearning(CodeMapping cm){
@@ -312,6 +314,26 @@ public class ASTUtils {
         if(m.matches())
             return m.group(3);
         return "";
+    }
+
+    public static String normalizeStrLit(String codeSnippet, String beforeStmt, String afterStmt) {
+
+        List<String> literals = Stream.concat(CommitMode.getAllStringLiterals(beforeStmt), CommitMode.getAllStringLiterals(afterStmt))
+                .distinct()
+                .collect(toList());
+        ;
+        Map<String, String> literalsMap = IntStream.range(0, literals.size()).boxed().collect(toMap(x -> literals.get(x), x -> "STR" + x));
+
+        UnaryOperator<String> normalizeStLit = s -> {
+            var x = s;
+            for (var l : literalsMap.entrySet()) {
+                x = x.replace(l.getKey(), l.getValue());
+            }
+            return x;
+        };
+
+        return normalizeStLit.apply(codeSnippet);
+
     }
 
 //    public static void main(String a[]){

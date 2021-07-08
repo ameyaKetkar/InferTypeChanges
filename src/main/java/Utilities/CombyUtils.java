@@ -1,8 +1,6 @@
 package Utilities;
 
-import Utilities.comby.CombyMatch;
-import Utilities.comby.CombyRewrite;
-import Utilities.comby.Environment;
+import Utilities.comby.*;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -11,10 +9,7 @@ import type.change.treeCompare.PerfectMatch;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 import static java.util.stream.Collectors.*;
@@ -24,22 +19,30 @@ public class CombyUtils {
     public static Optional<CombyMatch> getMatch(String template, String source, String language) {
 
         template = template.replace("\\\"", "\"");
-        source = source.replace("\\\"", "\"");//;.replace("\\","\\\\");
-//        source = RWUtils.escapeMetaCharacters(source);
+        source = source.replace("\\\"", "\"");
 
         try {
             boolean flag = false;
-//            System.out.println("MATCH        "  + template + "       " + source);
             String result = getMatchCmd(template, source, language, null);
             if(result == null || result.isEmpty()){
                 result = getMatchCmd(template, source.replace("\\", "\\\\"), language, null);
                 flag = true;
             }
+            if(result == null || result.isEmpty()){
+                result = getMatchCmd(RWUtils.escapeMetaCharacters(template, List.of("[","]")),
+                        RWUtils.escapeMetaCharacters(source, List.of("[","]")), language, null);
+                flag = true;
+            }
+
             CombyMatch cm = new Gson().fromJson(result, CombyMatch.class);
             if(cm != null) {
                 cm.getMatches().forEach(c -> c.setMatched(c.getMatched().replace("\\\"", "\"")));
                 if (flag)
                     cm.getMatches().forEach(c -> c.setMatched(c.getMatched().replace("\\\\", "\\")));
+                cm.getMatches().forEach(c -> c.setMatched(RWUtils.unEscapeMetaCharacters(c.getMatched())));
+
+                // Remove Matches that match ""
+                cm.setMatches(cm.getMatches().stream().filter(x->!x.getMatched().equals("")).collect(toList()));
             }
 
             return Optional.ofNullable(cm);
@@ -82,7 +85,14 @@ public class CombyUtils {
         return Optional.empty();
     }
 
+
+
     public static Optional<CombyMatch> getPerfectMatch(String template, String source, String language) {
+        if (source.equals(template))
+            return getMatch(":[xyz]", source, language)
+                    .filter(cm -> isPerfectMatch(source, cm));
+
+
         return getMatch(template, source, language)
                 .filter(cm -> isPerfectMatch(source, cm));
     }
@@ -118,7 +128,7 @@ public class CombyUtils {
             String result = new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
             CombyRewrite cr = new Gson().fromJson(result, CombyRewrite.class);
             return Optional.ofNullable(cr);
-        } catch (IOException e) {
+        } catch (Exception e ) {
             e.printStackTrace();
             return Optional.empty();
         }

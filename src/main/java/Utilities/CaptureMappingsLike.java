@@ -60,17 +60,21 @@ public class CaptureMappingsLike {
             return List.of("new :[[c]]" + "(" + generateArgs(cic.arguments().size()) + ")",
                         "new :[[c]]<:[ta]>" + "(" + generateArgs(cic.arguments().size()) + ")");
         }
-        else if(ast.getNodeType() == ASTNode.ASSIGNMENT) return List.of(":[nm]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
+        else if(ast.getNodeType() == ASTNode.ASSIGNMENT) return List.of(":[nm]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
         else if(ast.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT)
-            return List.of(":[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
-                ":[mod:e] :[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
-        else if(ast.getNodeType() == ASTNode.INFIX_EXPRESSION)
-            return List.of(":[r]:[op~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]:[a]");
-        else if(ast.getNodeType() == ASTNode.PREFIX_EXPRESSION) return List.of(":[b~(\\+|\\-|!)+]:[r]");
-        else if(ast.getNodeType() == ASTNode.POSTFIX_EXPRESSION) return List.of(":[r]:[b~(\\+|\\-|!)+]");
+            return List.of(":[ty:e] :[[nm]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
+                ":[mod:e] :[ty:e] :[[nm]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
+        else if(ast.getNodeType() == ASTNode.INFIX_EXPRESSION) {
+            InfixExpression infxEpr = (InfixExpression) ast;
+            String op = infxEpr.getOperator().toString();
+//            return List.of(":[r]"+op+":[a]")
+            return List.of(":[r]:[opc~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]:[a]");
+        }
+        else if(ast.getNodeType() == ASTNode.PREFIX_EXPRESSION) return List.of(":[bc~(\\+|\\-|!)+]:[r]");
+        else if(ast.getNodeType() == ASTNode.POSTFIX_EXPRESSION) return List.of(":[r]:[bc~(\\+|\\-|!)+]");
         else if(ast.getNodeType() == ASTNode.RETURN_STATEMENT) return List.of("return :[e]");
         else if(ast.getNodeType() == ASTNode.LAMBDA_EXPRESSION) {
-            return List.of(generateArgs(((LambdaExpression)ast).parameters().size()) + ":[l~\\s*(->)\\s*]:[b]");
+            return List.of(generateArgs(((LambdaExpression)ast).parameters().size()) + ":[lc~\\s*(->)\\s*]:[b]");
         }
         else if(ast.getNodeType() == ASTNode.CAST_EXPRESSION) return List.of("(:[t]):[ex]");
         else if(ast.getNodeType() == ASTNode.STRING_LITERAL) return List.of(":[a~\\\".*\\\"]");

@@ -6,6 +6,8 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Generated("jsonschema2pojo")
 public class Environment {
@@ -21,11 +23,24 @@ public class Environment {
     private Range__1 range;
 
     public String getVariable() {
+        Pattern p = Pattern.compile("(.*)_(.*)_equal");
+        Matcher mt = p.matcher(this.variable);
+        if(mt.matches()){
+            this.variable= mt.group(2);
+        }else {
+            this.variable = variable;
+        }
         return variable;
     }
 
     public void setVariable(String variable) {
-        this.variable = variable;
+        Pattern p = Pattern.compile("(.*)_(.*)_equal");
+        Matcher mt = p.matcher(variable);
+        if(mt.matches()){
+            this.variable= mt.group(2);
+        }else {
+            this.variable = variable;
+        }
     }
 
     public String getValue() {

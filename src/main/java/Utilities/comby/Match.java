@@ -47,6 +47,13 @@ public class Match {
         return getEnvironment().stream().collect(toMap(x -> x.getVariable(), x -> x.getValue(), (a,b)->b));
     }
 
+//    public boolean isSameTemplateVariable(Environment e1, Environment e2){
+//        if (e1.getValue().equals(e2.getValue()) && (e1.getVariable().endsWith("_" + e2.getVariable() + "_equal") || e2.getVariable().endsWith("_" + e1.getVariable() + "_equal")
+//                || e1.getVariable().equals(e2.getVariable())))
+//            return true;
+//        return false;
+//    }
+
     public Map<String, List<Range__1>> getTemplateVarSubstitutionsRange() {
         return getEnvironment().stream().collect(groupingBy(x -> x.getVariable(),
                 collectingAndThen(toList(), lss -> lss.stream().map(x->x.getRange()).collect(toList()))));
