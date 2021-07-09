@@ -111,7 +111,7 @@ public class FullMode {
         if(repo.isSuccess()){
             RefHandler r = new RefHandler(repoCloneURL, commit);
             try {
-                miner.detectAtCommit(repo.get().getRepository(), commit, r, 200);
+                miner.detectAtCommit(repo.get().getRepository(), commit, r);
             }catch (Exception e){
                 e.printStackTrace();
             }
