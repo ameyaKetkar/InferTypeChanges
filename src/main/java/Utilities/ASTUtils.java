@@ -321,9 +321,7 @@ public class ASTUtils {
         List<String> literals = Stream.concat(CommitMode.getAllStringLiterals(beforeStmt), CommitMode.getAllStringLiterals(afterStmt))
                 .distinct()
                 .collect(toList());
-        ;
         Map<String, String> literalsMap = IntStream.range(0, literals.size()).boxed().collect(toMap(x -> literals.get(x), x -> "STR" + x));
-
         UnaryOperator<String> normalizeStLit = s -> {
             var x = s;
             for (var l : literalsMap.entrySet()) {
@@ -331,9 +329,7 @@ public class ASTUtils {
             }
             return x;
         };
-
         return normalizeStLit.apply(codeSnippet);
-
     }
 
 //    public static void main(String a[]){

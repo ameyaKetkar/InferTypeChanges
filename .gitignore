@@ -13,7 +13,7 @@ Input/NoTypeChanges.txt
 lib/
 ResolvedResponsesOld/
 Input/input.txt
-
+ExperimentOutput/
 src/main/python/scripts/__pycache__/
 
 __pycache__/

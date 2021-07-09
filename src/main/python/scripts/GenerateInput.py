@@ -56,7 +56,8 @@ def generate_input():
     #                         if len({x[0] for x in v}) > 2])
     #     f.write(s)
 
-    csv = str.join("\n", [str.join(',', [c[0], c[1], c[2]]) for k, v in typeChange_commit.items() for c in v])
+    csv = str.join("\n", [str.join(',', [c1[0], c1[1], c1[2]]) for c1 in {c for k, v in typeChange_commit.items() for c in v}])
+    # csv = str.join("\n", [str.join(',', [c[0], c[1], c[2]]) for k, v in typeChange_commit.items() for c in v])
     with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/inputFP.txt', 'w+') as f:
         f.write(csv)
     print()
@@ -76,8 +77,8 @@ def cleanup(k):
 
 
 queryTypeChanges = [
-    # ('flt2dbl',  ('float', 'double')),
-    # ('I2L', ('int', 'long')),
+    ('flt2dbl',  ('float', 'double')),
+    ('I2L', ('int', 'long')),
     ('dbl2int', ('double', 'int')),
     ('IUnBox', ('java.lang.Integer', 'int')),
     ('ILUnBox', ('java.lang.Boolean', 'boolean')),
