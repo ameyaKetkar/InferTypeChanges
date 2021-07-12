@@ -37,13 +37,15 @@ public class GetUpdate {
     private final CodeMapping codeMapping;
     private final TypeChange typeChange;
     private final String commit;
+    private final String repoName;
 
-    public GetUpdate(CodeMapping codeMapping, TypeChange typeChange, String commit) {
+    public GetUpdate(CodeMapping codeMapping, TypeChange typeChange, String commit, String repoName) {
         this.codeMapping = codeMapping;
         this.typeChange = typeChange;
         this.matchesB4 = new HashMap<>();
         this.matchesAfter = new HashMap<>();
         this.commit = commit;
+        this.repoName = repoName;
     }
 
     public boolean areEqualInText(Tree t1, Tree t2) {
@@ -78,7 +80,9 @@ public class GetUpdate {
 //                && reasonForNoMR_matchReplace.get().getMatch().getTemplate().equals(reasonForNoMR_matchReplace.get().getReplace().getTemplate()))
 //            reasonForNoMR_matchReplace = Either.left("No Change!");
 
-        Update upd = new Update(root1, root2, before.toString(), after.toString(), reasonForNoMR_matchReplace.getOrNull(), codeMapping, typeChange);
+        Update upd = new Update(root1, root2, before.toString(), after.toString(),
+                reasonForNoMR_matchReplace.getOrNull(),
+                codeMapping, typeChange, commit, repoName);
 
         if (root1.hasSameType(root2)) {
             List<Update> subUpdate = tryToMatchCandidates(before, after

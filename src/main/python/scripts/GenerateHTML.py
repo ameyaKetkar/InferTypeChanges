@@ -63,8 +63,8 @@ if not os.path.exists(res):
     os.mkdir(res)
 
 type_change_ids = {}
-with open(os.path.join(parent(res), "newRun.jsonl")) as c:
-    with open(os.path.join(parent(res), "output1.jsonl")) as c1:
+with open(os.path.join(parent(res), "experiment.jsonl")) as c:
+    with open(os.path.join(parent(res), "experiment2.jsonl")) as c1:
         lines = c.readlines()
         lines.extend(c1.readlines())
         mappings = [json.loads(l) for l in lines if l != '\n']

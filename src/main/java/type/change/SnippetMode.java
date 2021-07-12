@@ -66,7 +66,7 @@ public class SnippetMode {
         List<List<List<InferredMappings>>> inferredMatchReplace = getAsCodeMapping(snp, commit, tc_)
                 .stream()
 //                .filter(x -> x._1().getB4().contains("getUnixDomainSocketPath"))
-                .map(xs -> xs.stream().map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit))
+                .map(xs -> xs.stream().map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit,"testPrj"))
                         .map(a -> a.stream().map(x -> new InferredMappings(tc, x)).collect(toList()))
                         .collect(toList()))
 //                .map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit))

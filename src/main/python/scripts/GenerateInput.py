@@ -26,39 +26,14 @@ def generate_input():
         except:
             print('could not analyze', c)
 
-    typeChange_commit1 = {k: v for k, v in
-                          sorted(typeChange_commit.items(), key=lambda item: len({x[0] for x in item[1]}),
-                                 reverse=True) if cleanup(k) and len({x[0] for x in v}) > 1}
-
-    xs1 = []
-    for k, v in typeChange_commit1.items():
-        if (k[1], k[0]) in typeChange_commit1.keys():
-            l1 = len({x[2] for x in v})
-            l2 = len({x[2] for x in typeChange_commit1[(k[1], k[0])]})
-            if l2 <= l1:
-                xs1.append((k[1], k[0]))
-
     qtc = [x[1] for x in queryTypeChanges]
     typeChange_commit = {k: v for k, v in
                          sorted(typeChange_commit.items(), key=lambda item: len({x[2] for x in item[1]}),
                                 reverse=True) if cleanup(k) and len({x[2] for x in v}) > 1 if k in qtc}
-    # xs = []
-    # for k, v in typeChange_commit.items():
-    #     print(k, len(v))
-    #     if (k[1],k[0]) in typeChange_commit.keys():
-    #         l1 = len({x[2] for x in v})
-    #         l2 = len({x[2] for x in typeChange_commit[(k[1],k[0])]})
-    #         if l2 <= l1:
-    #             xs.append((k[1],k[0]))
 
-    # with open('op.txt', 'w+') as f:
-    #     s = str.join('\n', [str(k) + " - " + str(len({x[0] for x in v})) for k, v in typeChange_commit.items()
-    #                         if len({x[0] for x in v}) > 2])
-    #     f.write(s)
 
     csv = str.join("\n", [str.join(',', [c1[0], c1[1], c1[2]]) for c1 in {c for k, v in typeChange_commit.items() for c in v}])
-    # csv = str.join("\n", [str.join(',', [c[0], c[1], c[2]]) for k, v in typeChange_commit.items() for c in v])
-    with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/inputFP.txt', 'w+') as f:
+    with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/inputFP5.txt', 'w+') as f:
         f.write(csv)
     print()
 

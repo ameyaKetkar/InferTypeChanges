@@ -6,6 +6,8 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.Tuple3;
+import io.vavr.Tuple5;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import org.refactoringminer.RMinerUtils;
@@ -22,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.isNotWorthLearningOnlyStrings;
@@ -32,6 +35,23 @@ import static type.change.treeCompare.Update.getAllDescendants;
 public class CommitMode {
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+
+    public static Map<Tuple3<String, String, Tuple2<String, String>>, Set<Tuple2<String, String>>> performedAdaptations;
+
+    static {
+        try {
+            performedAdaptations = Stream.concat(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/experiment.jsonl")).stream(),
+                    Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/experiment2.jsonl")).stream())
+                    .filter(x -> !x.isEmpty())
+                    .map(x -> new Gson().fromJson(x, InferredMappings.class))
+                    .map(x -> Tuple.of(x.getInstances().getOriginalCompleteBefore(), x.getInstances().getOriginalCompleteAfter(), x.getMatch(), x.getReplace(), x.getInstances().getNames()))
+                    .collect(groupingBy(x -> Tuple.of(x._1(), x._2(), x._5()), collectingAndThen(toList(), xs -> xs.stream()
+                            .map(x->Tuple.of(x._3(), x._4())).collect(toSet()))));
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     static void commitMode(String[] args) throws IOException {
 
@@ -52,6 +72,11 @@ public class CommitMode {
                         .map(i -> i.getInstances().getCommit())
                         .collect(toSet()) : new HashSet<>();
 
+
+
+
+
+
         var futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
                 .filter(x -> !analyzedCommits.contains(x[2]))
                 .map(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile, pathToResolvedCommits))
@@ -62,7 +87,8 @@ public class CommitMode {
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile, Path pathToResolvedCommits) {
         System.out.println("Analyzing : " + commit + " " + repoName);
 
-
+        if (!commit.equals("02637e2395b2a6ea8a3fad0b51917e396500247e"))
+            return new CompletableFuture<>();
 
         return CompletableFuture.supplyAsync(() -> //Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoCloneURL, commit)))
                 Either.right(Try.of(() -> Files.readString(pathToResolvedCommits.resolve(commit + ".json"))).toJavaOptional())
@@ -96,7 +122,7 @@ public class CommitMode {
                                 return getAsCodeMapping(repoCloneURL, typeChange, commit).stream().filter(x -> !isNotWorthLearningOnlyStrings(x))
 //                                        .filter(x->x.getB4().contains("Typeface.createFromResources(config,mAssets,file)")
 //                                        || x.getAfter().contains("Typeface.createFromResources(config,mAssets,file)"))
-                                        .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit))
+                                        .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit, repoName))
                                                 .thenApply(updates -> updates.stream().map(a -> new Gson()
                                                         .toJson(new InferredMappings(typeChange_template.get(typeChangeStr), a), InferredMappings.class))
                                                         .collect(joining("\n")))
@@ -125,15 +151,13 @@ public class CommitMode {
                 .addAllReplcementInferred(sm.getReplacements().stream()
                         .map(x -> TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred.newBuilder().setReplacementType(x).build())
                         .collect(toList()))
-//                .setUrlbB4(generateUrl(sm.getLocationInfoBefore(), url, commit, "L"))
-//                .setUrlAftr(generateUrl(sm.getLocationInfoAfter(), url, commit, "R"))
                 .build())
                 .collect(toList());
     }
 
 
 
-    static List<Update> inferTransformation(CodeMapping codeMapping, RMinerUtils.TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit) {
+    static List<Update> inferTransformation(CodeMapping codeMapping, RMinerUtils.TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit, String repoName) {
 
         List<Update> explainableUpdates = new ArrayList<>();
         String stmtB4 = codeMapping.getB4();
@@ -150,7 +174,6 @@ public class CommitMode {
 
         var stmt_b = ASTUtils.getStatement(stmtB4.replace("\n", ""));
         var stmt_a = ASTUtils.getStatement(stmtAftr.replace("\n", ""));
-
 
         if (stmt_a.isEmpty() || stmt_b.isEmpty())
             return new ArrayList<>();
@@ -170,7 +193,7 @@ public class CommitMode {
 
         System.out.println(String.join("\n->\n", stmtB4, stmtAftr));
 
-        GetUpdate gu = new GetUpdate(codeMapping, typeChange, commit);
+        GetUpdate gu = new GetUpdate(codeMapping, typeChange, commit, repoName);
         Update upd = gu.getUpdate(stmt_b.get(), stmt_a.get());
 
         if (upd == null) {

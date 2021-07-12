@@ -73,15 +73,15 @@ public class InferredMappings {
         private Map<String, String> TemplateVariableToCodeAfter;
         private String isRelevant;
 
-        public Instance(CodeMapping cm, Update upd, TypeChange tc){
+        public Instance(CodeMapping cm, Update upd, TypeChange tc, String commit, String repoName){
             OriginalCompleteBefore = cm.getB4().replace("\n","");
             OriginalCompleteAfter = cm.getAfter().replace("\n","");
             Before = upd.getBeforeStr().replace("\n","");
             After = upd.getAfterStr().replace("\n","");
-            Project =extractProject(cm.getUrlbB4()) ;
-            Commit = extractCommit(cm.getUrlbB4());
+            Project = repoName;
+            Commit = commit;
             CompilationUnit = tc.getBeforeCu().right;
-            LineNos = Tuple.of(extractLineNumber(cm.getUrlbB4()), extractLineNumber(cm.getUrlAftr()));
+            LineNos = Tuple.of(String.valueOf(tc.getLocationInfoBefore().getStartLine()), String.valueOf(tc.getLocationInfoBefore().getStartLine()));
             Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
             TemplateVariableToCodeBefore = upd.getMatchReplace().map(e -> e.getMatch().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
@@ -168,7 +168,7 @@ public class InferredMappings {
             return After;
         }
 
-        public Tuple2<String, String> getLineNos() {
+        public Tuple2<String,String> getLineNos() {
             return LineNos;
         }
 
@@ -197,8 +197,8 @@ public class InferredMappings {
         }
 
         public boolean isRelevant() {
-            return true || !isRelevant.equals("Not Relevant");
-//            return !isRelevant.equals("Not Relevant");
+//            return true || !isRelevant.equals("Not Relevant");
+            return !isRelevant.equals("Not Relevant");
         }
 
         public List<String> getRelevantImports() {

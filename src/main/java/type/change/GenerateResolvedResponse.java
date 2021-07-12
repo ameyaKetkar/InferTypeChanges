@@ -1,5 +1,6 @@
 package type.change;
 
+import Utilities.ResolveTypeUtil;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
@@ -19,12 +20,20 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 
 public class GenerateResolvedResponse {
-    public static Path pathToAllCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/HttpServer/RMinerAllCommits");
-    public static Path pathToResolvedCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponses1");
+    public static Path pathToAllCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ExperimentOutput");
+    public static Path pathToResolvedCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponseExperiment");
 
-    public static void main(String[] a) throws IOException {
-        Path fileName_noTC = pathToResolvedCommits.getParent().resolve("NoTypeChanges.txt");
+    public static void main(String[] args) throws IOException {
+        Path fileName_noTC = pathToResolvedCommits.resolve("NoTypeChanges.txt");
         Set<String> noTypeChanges = new HashSet<>(); //Files.readAllLines(fileName_noTC)
+
+        ResolveTypeUtil.allJavaClasses = new HashSet<>(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaClasses.txt")));
+        ResolveTypeUtil.allJavaLangClasses = Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaLangClasses.txt"))
+                .stream().collect(toMap(x -> {
+                    var spl = x.split("\\.");
+                    return spl[spl.length - 1];
+                }, x -> x, (a, b) -> a));
+
 
         Set<String> alreadyResolved = Files.list(pathToResolvedCommits)
                 .map(x -> x.getFileName().toString().replace(".json", "")).collect(Collectors.toSet());
