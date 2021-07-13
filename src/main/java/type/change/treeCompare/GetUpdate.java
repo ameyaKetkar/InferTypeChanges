@@ -6,14 +6,12 @@ import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
+import com.google.common.collect.Streams;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.*;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
-import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
+import org.eclipse.jdt.core.dom.*;
 import org.refactoringminer.RMinerUtils.TypeChange;
 
 import java.util.*;
@@ -21,6 +19,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.*;
+import static com.google.common.collect.Streams.zip;
 import static java.util.Collections.reverseOrder;
 import static java.util.Comparator.comparingInt;
 import static java.util.Map.*;
@@ -132,10 +131,9 @@ public class GetUpdate {
 
     private void mergeParentChildrenMatchReplace(Update upd, List<Update> simplestDescendants, String beforeName, String commit) {
         for (var child : simplestDescendants) {
-            Optional<MatchReplace> m = mergeParentChildMatchReplace(upd.getMatchReplace().get(), child.getMatchReplace().get(), beforeName, commit);
-            if (m.isPresent()) upd.setMatchReplace(m.get());
-//            else
-//                child.setMatchReplace(null);
+            if(upd.getMatchReplace().isEmpty() || child.getMatchReplace().isEmpty()) continue;
+            mergeParentChildMatchReplace(upd.getMatchReplace().get(), child.getMatchReplace().get(), beforeName, commit)
+                    .ifPresent(upd::setMatchReplace);
         }
     }
 
@@ -154,6 +152,14 @@ public class GetUpdate {
     public List<Update> tryToMatchCandidates(ASTNode before, ASTNode after,
                                              List<ASTNode> childrenB4, List<ASTNode> childrenAfter) {
 
+        if (before instanceof Statement) {
+            return zip(childrenB4.stream(), childrenAfter.stream(), this::getUpdate).collect(toList());
+        }
+
+        return hungarianMatch(before, after, childrenB4, childrenAfter);
+    }
+
+    private List<Update> hungarianMatch(ASTNode before, ASTNode after, List<ASTNode> childrenB4, List<ASTNode> childrenAfter) {
         Map<ASTNode, ASTNode> exactMatches = childrenB4.stream()
                 .flatMap(x -> childrenAfter.stream().filter(y -> y.toString().equals(x.toString()))
                         .map(y -> Tuple.of(x, y)))
@@ -202,7 +208,6 @@ public class GetUpdate {
             alreadyConsideredB4.add(e._1().toString());
             alreadyConsideredAfter.add(e._2().toString());
         }
-
         return result;
     }
 
@@ -251,12 +256,6 @@ public class GetUpdate {
     public Update getUpdate(ASTNode before, ASTNode after) {
         Tree root1 = ASTUtils.getGumTreeContextForASTNode(before).map(TreeContext::getRoot).orElse(null);
         Tree root2 = ASTUtils.getGumTreeContextForASTNode(after).map(TreeContext::getRoot).orElse(null);
-
-
-//        Matcher defaultMatcher = Matchers.getInstance().getMatcher("gumtree"); // retrieves the default matcher
-//        MappingStore mappings = defaultMatcher.match(root1, root2);
-
-
         return getUpdate(before, after, root1, root2);
     }
 

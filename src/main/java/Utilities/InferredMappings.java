@@ -81,7 +81,10 @@ public class InferredMappings {
             Project = repoName;
             Commit = commit;
             CompilationUnit = tc.getBeforeCu().right;
-            LineNos = Tuple.of(String.valueOf(tc.getLocationInfoBefore().getStartLine()), String.valueOf(tc.getLocationInfoBefore().getStartLine()));
+            if(tc.getLocationInfoBefore() == null)
+                LineNos = Tuple.of("0","0");
+            else
+                LineNos = Tuple.of(String.valueOf(tc.getLocationInfoBefore().getStartLine()), String.valueOf(tc.getLocationInfoBefore().getStartLine()));
             Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
             TemplateVariableToCodeBefore = upd.getMatchReplace().map(e -> e.getMatch().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
@@ -135,7 +138,8 @@ public class InferredMappings {
             Optional<Utilities.comby.Match> cm =
                     Stream.of(":[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];",
                             ":[mod:e] :[ty:e] :[[nm]]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];",
-                            ":[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];")
+                            ":[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r];",
+                            ":[nm:e]:[29~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]")
                     .flatMap(x -> CombyUtils.getPerfectMatch(x, source, null).stream())
                     .findFirst().map(x -> x.getMatches().get(0));
 
@@ -197,8 +201,8 @@ public class InferredMappings {
         }
 
         public boolean isRelevant() {
-//            return true || !isRelevant.equals("Not Relevant");
-            return !isRelevant.equals("Not Relevant");
+            return true || !isRelevant.equals("Not Relevant");
+//            return !isRelevant.equals("Not Relevant");
         }
 
         public List<String> getRelevantImports() {

@@ -111,7 +111,7 @@ public class TheExperiment {
                 .flatMap(typeChange -> {
                     if(!intersectingTCs.contains(Tuple.of(typeChange.getB4Type(), typeChange.getAfterType())))
                         return Stream.empty();
-                    return getAsCodeMapping(rr.commits.get(0).repository, typeChange, rr.commits.get(0).sha1)
+                    return getAsCodeMapping(typeChange)
                                 .stream().filter(x -> !isNotWorthLearning(x));
                         })
                 .findFirst().isPresent();

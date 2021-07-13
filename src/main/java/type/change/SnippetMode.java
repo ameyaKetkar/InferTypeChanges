@@ -1,8 +1,6 @@
 package type.change;
 
-import Utilities.InferredMappings;
-import Utilities.ResolveTypeUtil;
-import Utilities.SnippetMappings;
+import Utilities.*;
 import com.google.gson.Gson;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
@@ -37,6 +35,17 @@ public class SnippetMode {
         Path pathToSnippets = Paths.get(args[6]);
         SnippetMappings sn = new Gson().fromJson(Files.readString(pathToSnippets), SnippetMappings.class);
 
+        for (var snp: sn.sns){
+            List<SnippetMappings.ChangesForCommit> ls = new ArrayList<>();
+            if(snp.tc_.contains("slf4j"))
+                continue;
+            for(var cmt : snp.commits){
+
+                ls.add(NormalizeSnippet(cmt.commit, pathToResolvedCommits, cmt, snp.tc_));
+            }
+            snp.commits = ls;
+        }
+
         Map<String, List<List<List<InferredMappings>>>> futures = sn.sns.parallelStream()
                 .map(snp -> Tuple.of(snp.tc_, snp.commits.stream()
                         .flatMap(cmt -> AnalyzeSnippet(cmt.commit, pathToResolvedCommits, cmt, snp.tc_).stream()).collect(toList())))
@@ -44,6 +53,35 @@ public class SnippetMode {
 
         var jsonStr = new Gson().toJson(futures);
         Files.write(outputFile, jsonStr.getBytes(), StandardOpenOption.CREATE);
+    }
+
+    public static SnippetMappings.ChangesForCommit NormalizeSnippet(String commit, Path pathToResolvedCommits, SnippetMappings.ChangesForCommit snp, String tc_) {
+        Optional<ResolvedResponse> response = Try.of(() -> Files.readString(pathToResolvedCommits.resolve(commit + ".json"))).toJavaOptional()
+                .map(x -> new Gson().fromJson(x, ResolvedResponse.class));
+
+        List<RMinerUtils.TypeChange> allRefactorings = response.get().commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList());
+        if (allRefactorings.isEmpty()) {
+            System.out.println("No Refactorings found!");
+            return snp;
+        }
+        Set<Tuple2<String, String>> allRenames = allRefactorings.stream()
+                .filter(x -> x.getB4Type() != null && !x.getRefactoringKind().equals("CHANGE_RETURN_TYPE"))
+                .filter(r -> !r.getBeforeName().equals(r.getAfterName()))
+                .map(r -> Tuple.of(r.getBeforeName(), r.getAfterName())).collect(toSet());
+
+        for(var ba :snp.b4Aftrs){
+            for(var m: ba.getMappings()){
+                String stmtB4 = m.before;
+                String stmtAftr = m.after;
+                if (stmtB4==null || stmtAftr==null)
+                    continue;
+                for (Tuple2<String, String> rn : allRenames)
+                    if (stmtB4.contains(rn._1()) && stmtAftr.contains(rn._2()))
+                        stmtAftr = CombyUtils.performIdentifierRename(rn._1(), rn._2(), stmtAftr);
+                m.after = stmtAftr;
+            }
+        }
+        return snp;
     }
 
 
@@ -63,10 +101,12 @@ public class SnippetMode {
 
         var tc = Tuple.of(tc_.split("->")[0], tc_.split("->")[1]);
 
-        List<List<List<InferredMappings>>> inferredMatchReplace = getAsCodeMapping(snp, commit, tc_)
+        List<List<List<InferredMappings>>> inferredMatchReplace = getAsCodeMapping(snp, tc_)
                 .stream()
-//                .filter(x -> x._1().getB4().contains("getUnixDomainSocketPath"))
-                .map(xs -> xs.stream().map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit,"testPrj"))
+//                .filter(x -> x.getB4().contains("private Optional<Integer> cachedHashCode=Optional.empty();"))
+                .map(xs -> xs.stream()
+                        .filter(x -> x._1().getB4().contains("LinkedList<LoggingEvent>()"))
+                        .map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit,"testPrj"))
                         .map(a -> a.stream().map(x -> new InferredMappings(tc, x)).collect(toList()))
                         .collect(toList()))
 //                .map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit))
@@ -76,7 +116,7 @@ public class SnippetMode {
 
     }
 
-    public static List<List<Tuple2<CodeMapping, RMinerUtils.TypeChange>>> getAsCodeMapping(SnippetMappings.ChangesForCommit cfc, String commit, String tc_) {
+    public static List<List<Tuple2<CodeMapping, RMinerUtils.TypeChange>>> getAsCodeMapping(SnippetMappings.ChangesForCommit cfc, String tc_) {
         return cfc.b4Aftrs.stream()
                 .map(z -> z.getMappings().stream()
                         .filter(x -> x.before != null && x.after != null)

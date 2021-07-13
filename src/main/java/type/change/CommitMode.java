@@ -7,7 +7,6 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChang
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
-import io.vavr.Tuple5;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import org.refactoringminer.RMinerUtils;
@@ -24,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static Utilities.ASTUtils.isNotWorthLearningOnlyStrings;
@@ -72,11 +70,6 @@ public class CommitMode {
                         .map(i -> i.getInstances().getCommit())
                         .collect(toSet()) : new HashSet<>();
 
-
-
-
-
-
         var futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
                 .filter(x -> !analyzedCommits.contains(x[2]))
                 .map(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile, pathToResolvedCommits))
@@ -87,7 +80,7 @@ public class CommitMode {
     public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile, Path pathToResolvedCommits) {
         System.out.println("Analyzing : " + commit + " " + repoName);
 
-        if (!commit.equals("02637e2395b2a6ea8a3fad0b51917e396500247e"))
+        if (!commit.equals("20b05ffe6fb1a4e8f7b79f687b28fbe9fd34801f"))
             return new CompletableFuture<>();
 
         return CompletableFuture.supplyAsync(() -> //Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoCloneURL, commit)))
@@ -119,7 +112,7 @@ public class CommitMode {
                             .filter(typeChange -> typeChange_template.containsKey(Tuple.of(typeChange.getB4Type(), typeChange.getAfterType())))
                             .flatMap(typeChange -> {
                                 Tuple2<String, String> typeChangeStr = Tuple.of(typeChange.getB4Type(), typeChange.getAfterType());
-                                return getAsCodeMapping(repoCloneURL, typeChange, commit).stream().filter(x -> !isNotWorthLearningOnlyStrings(x))
+                                return getAsCodeMapping(typeChange).stream().filter(x -> !isNotWorthLearningOnlyStrings(x))
 //                                        .filter(x->x.getB4().contains("Typeface.createFromResources(config,mAssets,file)")
 //                                        || x.getAfter().contains("Typeface.createFromResources(config,mAssets,file)"))
                                         .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit, repoName))
@@ -142,14 +135,14 @@ public class CommitMode {
         return matcher.results().map(x -> x.group());
     }
 
-    public static List<CodeMapping> getAsCodeMapping(String url, RMinerUtils.TypeChange tc, String commit) {
-
+    public static List<CodeMapping> getAsCodeMapping(RMinerUtils.TypeChange tc) {
         return tc.getReferences().stream().map(sm -> CodeMapping.newBuilder()
                 .setB4(ASTUtils.normalizeStrLit(sm.getBeforeStmt(), sm.getBeforeStmt(), sm.getAfterStmt()))
                 .setAfter(ASTUtils.normalizeStrLit(sm.getAfterStmt(), sm.getBeforeStmt(), sm.getAfterStmt()))
                 .setIsSame(sm.isSimilar())
                 .addAllReplcementInferred(sm.getReplacements().stream()
-                        .map(x -> TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred.newBuilder().setReplacementType(x).build())
+                        .map(x -> TypeChangeAnalysisOuterClass.TypeChangeAnalysis.ReplacementInferred.newBuilder()
+                                .setReplacementType(x).build())
                         .collect(toList()))
                 .build())
                 .collect(toList());
