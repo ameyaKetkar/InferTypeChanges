@@ -53,6 +53,7 @@ public class SnippetMode {
 
         var jsonStr = new Gson().toJson(futures);
         Files.write(outputFile, jsonStr.getBytes(), StandardOpenOption.CREATE);
+
     }
 
     public static SnippetMappings.ChangesForCommit NormalizeSnippet(String commit, Path pathToResolvedCommits, SnippetMappings.ChangesForCommit snp, String tc_) {
@@ -60,6 +61,7 @@ public class SnippetMode {
                 .map(x -> new Gson().fromJson(x, ResolvedResponse.class));
 
         List<RMinerUtils.TypeChange> allRefactorings = response.get().commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList());
+
         if (allRefactorings.isEmpty()) {
             System.out.println("No Refactorings found!");
             return snp;
@@ -89,6 +91,9 @@ public class SnippetMode {
         Optional<ResolvedResponse> response = Try.of(() -> Files.readString(pathToResolvedCommits.resolve(commit + ".json"))).toJavaOptional()
                 .map(x -> new Gson().fromJson(x, ResolvedResponse.class));
 
+        if (tc_.contains("slf4j"))
+            return new ArrayList<>();
+
         List<RMinerUtils.TypeChange> allRefactorings = response.get().commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList());
         if (allRefactorings.isEmpty()) {
             System.out.println("No Refactorings found!");
@@ -105,7 +110,7 @@ public class SnippetMode {
                 .stream()
 //                .filter(x -> x.getB4().contains("private Optional<Integer> cachedHashCode=Optional.empty();"))
                 .map(xs -> xs.stream()
-                        .filter(x -> x._1().getB4().contains("LinkedList<LoggingEvent>()"))
+                        .filter(x -> x._1().getB4().contains("this.classTags=classTags;"))
                         .map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit,"testPrj"))
                         .map(a -> a.stream().map(x -> new InferredMappings(tc, x)).collect(toList()))
                         .collect(toList()))

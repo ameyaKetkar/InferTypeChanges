@@ -62,8 +62,8 @@ public class CaptureMappingsLike {
         }
         else if(ast.getNodeType() == ASTNode.ASSIGNMENT) return List.of(":[nm]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
         else if(ast.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT)
-            return List.of(":[ty:e] :[[nm]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
-                ":[mod:e] :[ty:e] :[[nm]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
+            return List.of(":[ty:e] :[[nm1]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
+                ":[mod:e] :[ty:e] :[[nm2]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
         else if(ast.getNodeType() == ASTNode.INFIX_EXPRESSION) {
             InfixExpression infxEpr = (InfixExpression) ast;
             String op = infxEpr.getOperator().toString();
@@ -83,6 +83,22 @@ public class CaptureMappingsLike {
                 ":[d~[+-]?(\\d*\\.)?\\d+]:[c~(L|l|f|F)]",
                 ":[h~0[xX][0-9a-fA-F]+]",":[h~0[xX][0-9a-fA-F]+]:[c~(L|l|f|F)]");
         else if(ast.getNodeType() == ASTNode.BOOLEAN_LITERAL) return List.of(":[st~false]",":[st~true]");
+        else if(ast.getNodeType() == ASTNode.BLOCK){
+            //TODO: Ensure that template variables do not overlap
+            Block b = (Block)ast;
+            if(b.statements().size() == 2){
+                List<String> templates = new ArrayList<>();
+                    for (var t1 :getTemplatesFor((ASTNode) b.statements().get(0))){
+                        for (var t2 :getTemplatesFor((ASTNode) b.statements().get(1))){
+                            templates.add("{:[sp0~\\s*]"+t1 + ":[sp1~\\s*]"+t2+":[sp2~\\s*]}");
+                        }
+                    }
+            return templates;
+            }
+            if(b.statements().size() == 1){
+                return getTemplatesFor((ASTNode) b.statements().get(0));
+            }
+        }
         return List.of(":[[id]]");
 
     }

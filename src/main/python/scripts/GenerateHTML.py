@@ -47,8 +47,8 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
 
         apply_template_to(htmlPage, (colNames, body, Title, col_types, "../.."))
     if forWhat == 'Type Change Summary':
-        colNames = ['Before Type', 'After Type', 'Very Good Mappings', 'Good Mappings','No. of Commits','No. of Projects', 'Mappings']
-        col_types = '[\'string\',\'string\', \'number\', \'number\',\'number\', \'number\', \'number\']'
+        colNames = ['Before Type', 'After Type','Projects','Commits', 'Very Good Mappings', 'Good Mappings','No. of Commits','No. of Projects', 'Mappings']
+        col_types = '[\'string\',\'string\', \'number\',\'number\',\'number\', \'number\',\'number\', \'number\', \'number\']'
         Title = 'TypeChange Summary'
         body = []
         for k, v1 in mappingSummary.items():
@@ -62,6 +62,18 @@ res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultsTest
 if not os.path.exists(res):
     os.mkdir(res)
 
+
+def cleanup(k):
+    return k[0] != k[1] and \
+           k[0] not in ['var', 'val', 'java.lang.Void', 'java.lang.Object', 'void'] \
+           and k[1] not in ['var', 'val', 'java.lang.Void', 'java.lang.Object', 'void'] \
+           and len(k[0]) > 1 and len(k[1]) > 1 and k[0] != k[1] \
+           and not k[1].endswith(k[0]) and not k[0].endswith(k[1]) \
+           and '?' not in k[0] and '?' not in k[1] \
+           and not k[1].startswith(k[0] + "<") and not k[0].startswith(k[1] + "<") \
+           and not any(x in k[0] or x in k[1] for x in
+                       ['java.lang.Object, java.lang.Number', 'java.lang.Exception', 'java.lang.RuntimeException',
+                        'java.lang.Throwable', 'IOException', 'FileNotFoundException'])
 type_change_ids = {}
 with open(os.path.join(parent(res), "output.jsonl")) as c:
     with open(os.path.join(parent(res), "newRun.jsonl")) as c1:
@@ -79,6 +91,8 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
         for typeChange, mappings in tcTemplate_mapping.items():
             if typeChange in excludeTcs:
                 continue
+            if not cleanup(typeChange):
+                continue
             i = 0
             type_change_ids[typeChangeID] = typeChange
             mappingSummary = {}
@@ -89,7 +103,11 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
             goodMappingCounter = 0
             # commits = set()
             mapping_id_tracker = {}
+            all_commits = {inst['Commit'] for matchReplace, instances in mappings.items() for inst in instances}
+            all_projects = {inst['Project'] for matchReplace, instances in mappings.items() for inst in instances}
             for matchReplace, instances in mappings.items():
+                if html.escape(matchReplace[0]) == html.escape(matchReplace[1]):
+                    continue
                 print(i)
                 mapping_id = 'Mapping-' + str(i)
                 mapping_details = os.path.join(typeChangeFolder, mapping_id + ".html")
@@ -104,11 +122,6 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
                 mappingSummary[mapping_id]['isChange'] = mappingSummary[mapping_id]['Match'] != mappingSummary[mapping_id]['Replace']
                 mappingSummary[mapping_id]['isGood'] = mappingSummary[mapping_id]['Commits'] > 1 and mappingSummary[mapping_id]['isChange']
                 mappingSummary[mapping_id]['isVeryGood'] = mappingSummary[mapping_id]['Project'] > 1 and mappingSummary[mapping_id]['isChange']
-
-
-
-
-
                 if mappingSummary[mapping_id]['isVeryGood']:
                     veryGoodMappingCounter += 1
                 if mappingSummary[mapping_id]['isGood']:
@@ -120,16 +133,13 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
                     t.write(page)
                 with open(mapping_details.replace('.html', '.json'), 'w+') as fx:
                     json.dump(instances_, fx)
-
                 i += 1
-
-
             commits = set()
             projects = set()
             for matchReplace, instances in mappings.items():
-                for i in instances:
-                    commits.add(i['Commit'])
-                    projects.add(i['Project'])
+                for instance in instances:
+                    commits.add(instance['Commit'])
+                    projects.add(instance['Project'])
             commits_no = len(commits)
             projects_no = len(projects)
             mappingSummaryPath = os.path.join(res, "TypeChange" + str(typeChangeID), "MappingSummary" + ".html")
@@ -139,15 +149,16 @@ with open(os.path.join(parent(res), "output.jsonl")) as c:
 
             with open(mappingSummaryPath.replace('.html','.json'), 'w') as fx:
                 json.dump(mappingSummary, fx)
-
-            typeChangeSummary[typeChangeID] = {'Before Type': html.escape(typeChange[0]),
-                                               'After Type': html.escape(typeChange[1]),
-                                               'Good Mappings': goodMappingCounter,
-                                               'Very Good Mappings': veryGoodMappingCounter,
-                                               'No. of Commits': commits_no,
-                                               'No. of Projects': projects_no,
-                                               'Mappings': "<a href=" + mappingSummaryPath + ">" + str(
-                                                   len(mappings)) + "</a>"}
+            if i >= 1:
+                typeChangeSummary[typeChangeID] = {'Before Type': html.escape(typeChange[0]),
+                                                   'After Type': html.escape(typeChange[1]),
+                                                   'Projects' : len(all_projects),
+                                                   'Commits' : len(all_commits),
+                                                   'Good Mappings': goodMappingCounter,
+                                                   'Very Good Mappings': veryGoodMappingCounter,
+                                                   'No. of Commits': commits_no,
+                                                   'No. of Projects': projects_no,
+                                                   'Mappings': "<a href=" + mappingSummaryPath + ">" + str(i) + "</a>"}
 
             typeChangeID += 1
 

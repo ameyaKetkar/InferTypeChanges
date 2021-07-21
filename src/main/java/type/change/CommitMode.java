@@ -72,16 +72,16 @@ public class CommitMode {
 
         var futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
                 .filter(x -> !analyzedCommits.contains(x[2]))
-                .map(commit -> AnalyzeCommit(commit[0], commit[1], commit[2], outputFile, pathToResolvedCommits))
+                .map(commit -> AnalyzeCommit(commit[0], commit[2], outputFile, pathToResolvedCommits))
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
     }
 
-    public static CompletableFuture<Void> AnalyzeCommit(String repoName, String repoCloneURL, String commit, Path outputFile, Path pathToResolvedCommits) {
+    public static CompletableFuture<Void> AnalyzeCommit(String repoName, String commit, Path outputFile, Path pathToResolvedCommits) {
         System.out.println("Analyzing : " + commit + " " + repoName);
 
-        if (!commit.equals("20b05ffe6fb1a4e8f7b79f687b28fbe9fd34801f"))
-            return new CompletableFuture<>();
+//        if (!commit.equals("1104ca0fa49be07aeef3ee822d1cc1ecc6b598b5"))
+//            return new CompletableFuture<>();
 
         return CompletableFuture.supplyAsync(() -> //Either.right(HttpUtils.makeHttpRequest(HttpUtils.getRequestFor(repoName, repoCloneURL, commit)))
                 Either.right(Try.of(() -> Files.readString(pathToResolvedCommits.resolve(commit + ".json"))).toJavaOptional())
@@ -113,7 +113,7 @@ public class CommitMode {
                             .flatMap(typeChange -> {
                                 Tuple2<String, String> typeChangeStr = Tuple.of(typeChange.getB4Type(), typeChange.getAfterType());
                                 return getAsCodeMapping(typeChange).stream().filter(x -> !isNotWorthLearningOnlyStrings(x))
-//                                        .filter(x->x.getB4().contains("Typeface.createFromResources(config,mAssets,file)")
+                                        .filter(x->x.getB4().contains("for(") && typeChangeStr._1().contains("List") && typeChangeStr._2().contains("Set"))
 //                                        || x.getAfter().contains("Typeface.createFromResources(config,mAssets,file)"))
                                         .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit, repoName))
                                                 .thenApply(updates -> updates.stream().map(a -> new Gson()
@@ -149,6 +149,7 @@ public class CommitMode {
     }
 
 
+    // ee729dcafee513affb8482a375ff119e525a1001 commit with the stirng update for file to path
 
     static List<Update> inferTransformation(CodeMapping codeMapping, RMinerUtils.TypeChange typeChange, Set<Tuple2<String, String>> otherRenames, String commit, String repoName) {
 

@@ -51,6 +51,14 @@ public class GetUpdate {
         return t1.getPos() == t2.getPos() && t1.getEndPos() == t2.getEndPos();
     }
 
+    public boolean oneToMany(ASTNode node1, ASTNode node2){
+        return false;
+    }
+
+    public boolean isInDomain(ASTNode node1, ASTNode node2){
+        return (isInDomain(node1) && isInDomain(node2)) || oneToMany(node1, node2);
+    }
+
     public boolean isInDomain(ASTNode node){
         return node instanceof Expression || node instanceof VariableDeclarationStatement || node instanceof ExpressionStatement;
     }

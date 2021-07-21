@@ -29,11 +29,10 @@ def generate_input():
     qtc = [x[1] for x in queryTypeChanges]
     typeChange_commit = {k: v for k, v in
                          sorted(typeChange_commit.items(), key=lambda item: len({x[2] for x in item[1]}),
-                                reverse=True) if cleanup(k) and len({x[2] for x in v}) > 1 if k in qtc}
-
+                                reverse=True) if cleanup(k) and len({x[2] for x in v}) > 2+ } #if k in qtc
 
     csv = str.join("\n", [str.join(',', [c1[0], c1[1], c1[2]]) for c1 in {c for k, v in typeChange_commit.items() for c in v}])
-    with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/inputFP5.txt', 'w+') as f:
+    with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/inputFP10.txt', 'w+') as f:
         f.write(csv)
     print()
 

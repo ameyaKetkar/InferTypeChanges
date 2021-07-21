@@ -85,8 +85,10 @@ public class MatchReplace {
          */
 
         BiPredicate<Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>>, String> isTheVariable =
-                (gen,varName) -> gen._1().getTemplateVariableMapping().get(varName).equals(beforeName) &&
-                        gen._2().getTemplateVariableMapping().get(varName).equals(beforeName);
+                (gen,varName) -> (gen._1().getTemplateVariableMapping().get(varName).equals(beforeName) &&
+                        gen._2().getTemplateVariableMapping().get(varName).equals(beforeName)) ||
+                        (gen._1().getTemplateVariableMapping().get(varName).endsWith("." + beforeName) &&
+                        gen._2().getTemplateVariableMapping().get(varName).endsWith("." + beforeName));
 
         Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> finalGeneralization = generalization;
 

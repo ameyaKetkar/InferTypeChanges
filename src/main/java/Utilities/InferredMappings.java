@@ -144,7 +144,7 @@ public class InferredMappings {
                     .findFirst().map(x -> x.getMatches().get(0));
 
             if(cm.isPresent()){
-                boolean tciVarOnLHs = cm.get().getEnvironment().stream().anyMatch(x -> x.getVariable().equals("nm")
+                boolean tciVarOnLHs = cm.get().getEnvironment().stream().anyMatch(x -> x.getVariable().startsWith("nm")
                         && (x.getValue().equals(tciVarName) || x.getValue().endsWith("." + tciVarName)));
                 boolean beforeOnRHS = cm.get().getEnvironment().stream().anyMatch(x -> x.getVariable().equals("r")
                         && x.getValue().replace("\\\"", "\"").equals(codeSnippet));
