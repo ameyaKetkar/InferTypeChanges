@@ -6,7 +6,6 @@ import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import io.vavr.Tuple3;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import org.refactoringminer.RMinerUtils;
@@ -34,22 +33,22 @@ public class CommitMode {
 
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
 
-    public static Map<Tuple3<String, String, Tuple2<String, String>>, Set<Tuple2<String, String>>> performedAdaptations;
-
-    static {
-        try {
-            performedAdaptations = Stream.concat(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/experiment.jsonl")).stream(),
-                    Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/experiment2.jsonl")).stream())
-                    .filter(x -> !x.isEmpty())
-                    .map(x -> new Gson().fromJson(x, InferredMappings.class))
-                    .map(x -> Tuple.of(x.getInstances().getOriginalCompleteBefore(), x.getInstances().getOriginalCompleteAfter(), x.getMatch(), x.getReplace(), x.getInstances().getNames()))
-                    .collect(groupingBy(x -> Tuple.of(x._1(), x._2(), x._5()), collectingAndThen(toList(), xs -> xs.stream()
-                            .map(x->Tuple.of(x._3(), x._4())).collect(toSet()))));
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    public static Map<Tuple3<String, String, Tuple2<String, String>>, Set<Tuple2<String, String>>> performedAdaptations;
+//
+//    static {
+//        try {
+//            performedAdaptations = Stream.concat(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/experiment.jsonl")).stream(),
+//                    Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/experiment2.jsonl")).stream())
+//                    .filter(x -> !x.isEmpty())
+//                    .map(x -> new Gson().fromJson(x, InferredMappings.class))
+//                    .map(x -> Tuple.of(x.getInstances().getOriginalCompleteBefore(), x.getInstances().getOriginalCompleteAfter(), x.getMatch(), x.getReplace(), x.getInstances().getNames()))
+//                    .collect(groupingBy(x -> Tuple.of(x._1(), x._2(), x._5()), collectingAndThen(toList(), xs -> xs.stream()
+//                            .map(x->Tuple.of(x._3(), x._4())).collect(toSet()))));
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     static void commitMode(String[] args) throws IOException {
 
@@ -63,21 +62,27 @@ public class CommitMode {
                     return spl[spl.length - 1];
                 }, x -> x, (a, b) -> a));
 
+        Path popularTypeChangesPath = Path.of(args[6]);
+
+        List<Tuple2<String, String>> popularTypeChanges = Files.readAllLines(popularTypeChangesPath)
+                                                .stream().map(x -> x.split("->")).map(x -> Tuple.of(x[0], x[1]))
+                                                .collect(toList());
+
         Set<String> analyzedCommits = Files.exists(outputFile) ?
                 Files.readAllLines(outputFile).stream()
                         .filter(x -> !x.isEmpty())
                         .map(x -> new Gson().fromJson(x, InferredMappings.class))
-                        .map(i -> i.getInstances().getCommit())
+                        .map(i -> i.getInstance().getCommit())
                         .collect(toSet()) : new HashSet<>();
 
         var futures = Files.readAllLines(inputFile).stream().map(x -> x.split(","))
                 .filter(x -> !analyzedCommits.contains(x[2]))
-                .map(commit -> AnalyzeCommit(commit[0], commit[2], outputFile, pathToResolvedCommits))
+                .map(commit -> AnalyzeCommit(commit[0], commit[2], outputFile, pathToResolvedCommits, popularTypeChanges))
                 .toArray(CompletableFuture[]::new);
         CompletableFuture.allOf(futures).join();
     }
 
-    public static CompletableFuture<Void> AnalyzeCommit(String repoName, String commit, Path outputFile, Path pathToResolvedCommits) {
+    public static CompletableFuture<Void> AnalyzeCommit(String repoName, String commit, Path outputFile, Path pathToResolvedCommits, List<Tuple2<String, String>> popularTypeChanges) {
         System.out.println("Analyzing : " + commit + " " + repoName);
 
 //        if (!commit.equals("1104ca0fa49be07aeef3ee822d1cc1ecc6b598b5"))
@@ -112,8 +117,12 @@ public class CommitMode {
                             .filter(typeChange -> typeChange_template.containsKey(Tuple.of(typeChange.getB4Type(), typeChange.getAfterType())))
                             .flatMap(typeChange -> {
                                 Tuple2<String, String> typeChangeStr = Tuple.of(typeChange.getB4Type(), typeChange.getAfterType());
+                                if (!popularTypeChanges.contains(typeChange_template.get(typeChangeStr)))
+                                    return Stream.empty();
+                                System.out.println(typeChange_template.get(typeChangeStr));
                                 return getAsCodeMapping(typeChange).stream().filter(x -> !isNotWorthLearningOnlyStrings(x))
-                                        .filter(x->x.getB4().contains("for(") && typeChangeStr._1().contains("List") && typeChangeStr._2().contains("Set"))
+//                                        .filter(x -> false)
+//                                        .filter(x->x.getB4().contains("for(") && typeChangeStr._1().contains("List") && typeChangeStr._2().contains("Set"))
 //                                        || x.getAfter().contains("Typeface.createFromResources(config,mAssets,file)"))
                                         .map(codeMapping -> CompletableFuture.supplyAsync(() -> inferTransformation(codeMapping, typeChange, allRenames, commit, repoName))
                                                 .thenApply(updates -> updates.stream().map(a -> new Gson()

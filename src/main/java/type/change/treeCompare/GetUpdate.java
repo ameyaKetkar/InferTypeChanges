@@ -1,18 +1,17 @@
 package type.change.treeCompare;
 
 import Utilities.ASTUtils;
-import com.github.gumtreediff.matchers.MappingStore;
-import com.github.gumtreediff.matchers.Matcher;
-import com.github.gumtreediff.matchers.Matchers;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeContext;
-import com.google.common.collect.Streams;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.*;
 import io.vavr.control.Either;
 import io.vavr.control.Try;
 import org.eclipse.jdt.core.dom.*;
 import org.refactoringminer.RMinerUtils.TypeChange;
+import type.change.visitors.LowerCaseIdentifiers;
 
 import java.util.*;
 import java.util.function.ToIntFunction;
@@ -63,19 +62,34 @@ public class GetUpdate {
         return node instanceof Expression || node instanceof VariableDeclarationStatement || node instanceof ExpressionStatement;
     }
 
+
+    public static boolean isSafe(ASTNode before, ASTNode after){
+        LowerCaseIdentifiers v1= new LowerCaseIdentifiers(), v2 = new LowerCaseIdentifiers();
+        before.accept(v1);
+        after.accept(v2);
+        ImmutableSet<String> varIdentifiers1 = Sets.difference(v1.identifiers, v1.methodNames).immutableCopy(),
+                varIdentifiers2 = Sets.difference(v2.identifiers, v2.methodNames).immutableCopy();
+        return Sets.difference(varIdentifiers2, varIdentifiers1).isEmpty() && Sets.difference(v2.stringLiterals, v1.stringLiterals).isEmpty()
+                && Sets.difference(v2.numberLiterals, v1.numberLiterals).isEmpty();
+    }
+
     public Update getUpdate(ASTNode before, ASTNode after, Tree root1, Tree root2) {
 
         if (root1 == null || root2 == null) return null;
+
 
         if (root1.getChildren().size() == 1 && root1.getChildren().size() == root2.getChildren().size()
                 && areEqualInText(root1, root1.getChild(0)) && areEqualInText(root2, root2.getChild(0))) {
             return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
         }
+        boolean isSafe = isSafe(before, after);
 
         Either<String, MatchReplace> reasonForNoMR_matchReplace;
         if (isInDomain(before) && isInDomain(after)) {
-            var locAftr = Tuple.of(root2.getPos(), root2.getEndPos());
-            var locB4 = Tuple.of(root1.getPos(), root1.getEndPos());
+
+            Tuple2<Integer, Integer> locAftr = Tuple.of(root2.getPos(), root2.getEndPos()),
+                    locB4 = Tuple.of(root1.getPos(), root1.getEndPos());
+
             reasonForNoMR_matchReplace = getMatchReplace(locB4, locAftr, before, after, typeChange.getBeforeName())
                     .filter(r -> !r.getGeneralizations().isEmpty())
                     .getOrElse(() -> getMatchReplaceCompleteDecomposition(before, after, typeChange.getBeforeName()))
@@ -83,13 +97,9 @@ public class GetUpdate {
             ;
         } else reasonForNoMR_matchReplace = Either.left("Not an expression");
 
-//        if(reasonForNoMR_matchReplace.isRight()
-//                && reasonForNoMR_matchReplace.get().getMatch().getTemplate().equals(reasonForNoMR_matchReplace.get().getReplace().getTemplate()))
-//            reasonForNoMR_matchReplace = Either.left("No Change!");
-
         Update upd = new Update(root1, root2, before.toString(), after.toString(),
                 reasonForNoMR_matchReplace.getOrNull(),
-                codeMapping, typeChange, commit, repoName);
+                codeMapping, typeChange, commit, repoName, isSafe);
 
         if (root1.hasSameType(root2)) {
             List<Update> subUpdate = tryToMatchCandidates(before, after
@@ -102,7 +112,7 @@ public class GetUpdate {
                 Map<String, String> unMappedTVB4 = reasonForNoMR_matchReplace.get().getUnMatchedBefore().entrySet().stream()
                         .filter(x -> !x.getKey().endsWith("c")).collect(toMap(Entry::getKey, x -> x.getValue()));
                 Map<String, String> unMappedTVAfter = reasonForNoMR_matchReplace.get().getUnMatchedAfter().entrySet().stream()
-                        .filter(x -> !x.getKey().endsWith("c")).collect(toMap(x -> x.getKey(), Entry::getValue));
+                        .filter(x -> !x.getKey().endsWith("c")).collect(toMap(Entry::getKey, Entry::getValue));
                 List<Update> subUpdate = tryToMatchTheUnMatched(before, after, reasonForNoMR_matchReplace.get(), unMappedTVB4, unMappedTVAfter);
                 upd.addAllSubExplanation(subUpdate);
             }else if(reasonForNoMR_matchReplace.getLeft().equals("Not an expression")){

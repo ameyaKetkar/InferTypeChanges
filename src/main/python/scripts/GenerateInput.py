@@ -28,11 +28,14 @@ def generate_input():
 
     qtc = [x[1] for x in queryTypeChanges]
     typeChange_commit = {k: v for k, v in
-                         sorted(typeChange_commit.items(), key=lambda item: len({x[2] for x in item[1]}),
-                                reverse=True) if cleanup(k) and len({x[2] for x in v}) > 2+ } #if k in qtc
+                         sorted(typeChange_commit.items(), key=lambda item: len({x[1] for x in item[1]}),
+                                reverse=True) if cleanup(k) and len({x[1] for x in v}) > 3} #if k in qtc
+    print(len(typeChange_commit))
+    for k in typeChange_commit.keys():
+        print(k[0]+'->'+k[1])
 
     csv = str.join("\n", [str.join(',', [c1[0], c1[1], c1[2]]) for c1 in {c for k, v in typeChange_commit.items() for c in v}])
-    with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/inputFP10.txt', 'w+') as f:
+    with open('/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/vPopularTCCommits.txt', 'w+') as f:
         f.write(csv)
     print()
 
@@ -41,12 +44,13 @@ def cleanup(k):
     return k[0] != k[1] and \
            k[0] not in ['var', 'val', 'java.lang.Void', 'java.lang.Object', 'void'] \
            and k[1] not in ['var', 'val', 'java.lang.Void', 'java.lang.Object', 'void'] \
+           and (k[0]!=':[[v0]]' and k[1] != ':[v0]') \
            and len(k[0]) > 1 and len(k[1]) > 1 and k[0] != k[1] \
            and not k[1].endswith(k[0]) and not k[0].endswith(k[1]) \
            and '?' not in k[0] and '?' not in k[1] \
            and not k[1].startswith(k[0] + "<") and not k[0].startswith(k[1] + "<") \
            and not any(x in k[0] or x in k[1] for x in
-                       ['java.lang.Object, java.lang.Number', 'java.lang.Exception', 'java.lang.RuntimeException',
+                       ['java.lang.Object, java.lang.Number','Exception', 'java.lang.Exception', 'java.lang.RuntimeException',
                         'java.lang.Throwable', 'IOException', 'FileNotFoundException'])
 
 

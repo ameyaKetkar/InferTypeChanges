@@ -20,11 +20,15 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 
 public class GenerateResolvedResponse {
-    public static Path pathToAllCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ExperimentOutput");
+    public static Path pathToAllCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/HttpServer/FinalExperimentRMinerOutput");
     public static Path pathToResolvedCommits = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/ResolvedResponseExperiment");
 
     public static void main(String[] args) throws IOException {
         Path fileName_noTC = pathToResolvedCommits.resolve("NoTypeChanges.txt");
+
+        if(Files.notExists(fileName_noTC))
+            Files.createFile(fileName_noTC);
+
         Set<String> noTypeChanges = new HashSet<>(); //Files.readAllLines(fileName_noTC)
 
         ResolveTypeUtil.allJavaClasses = new HashSet<>(Files.readAllLines(Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Input/javaClasses.txt")));

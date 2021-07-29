@@ -23,14 +23,14 @@ public class Update {
     private final List<Update> subUpdates;
     private Instance project_commit_cu_los;
 
-    public Update(Tree before, Tree after, String beforeStr, String afterStr, MatchReplace matchReplace, CodeMapping codeMapping, TypeChange typeChange, String commit, String repoName) {
+    public Update(Tree before, Tree after, String beforeStr, String afterStr, MatchReplace matchReplace, CodeMapping codeMapping, TypeChange typeChange, String commit, String repoName, boolean isSafe) {
         this.before = before;
         this.after = after;
         this.beforeStr = beforeStr;
         this.afterStr = afterStr;
         this.subUpdates = new ArrayList<>();
         this.matchReplace = matchReplace;
-        this.project_commit_cu_los = new Instance(codeMapping, this, typeChange, commit, repoName);
+        this.project_commit_cu_los = new Instance(codeMapping, this, typeChange, commit, repoName, isSafe);
     }
 
     public Optional<String> applyUpdate(String source){

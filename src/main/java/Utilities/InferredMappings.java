@@ -1,15 +1,21 @@
 package Utilities;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.Statement;
 import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.Update;
+import type.change.visitors.LowerCaseIdentifiers;
 
+import javax.swing.plaf.nimbus.State;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static Utilities.ASTUtils.*;
 import static Utilities.ResolveTypeUtil.resolveTypeNames;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
@@ -41,7 +47,7 @@ public class InferredMappings {
         return Replace;
     }
 
-    public Instance getInstances() {
+    public Instance getInstance() {
         return Instance;
     }
 
@@ -66,33 +72,65 @@ public class InferredMappings {
         private final String Project;
         private final String Commit;
         private final String CompilationUnit;
-        private final Tuple2<String, String> LineNos;
+        private final Tuple2<Integer,Integer> LineNos;
         private final Tuple2<String, String> Names;
         private Map<String, String> TemplateVariableToCodeBefore;
         private final List<String> RelevantImports;
         private Map<String, String> TemplateVariableToCodeAfter;
         private String isRelevant;
+        private boolean isSafe;
 
-        public Instance(CodeMapping cm, Update upd, TypeChange tc, String commit, String repoName){
-            OriginalCompleteBefore = cm.getB4().replace("\n","");
-            OriginalCompleteAfter = cm.getAfter().replace("\n","");
-            Before = upd.getBeforeStr().replace("\n","");
-            After = upd.getAfterStr().replace("\n","");
-            Project = repoName;
-            Commit = commit;
-            CompilationUnit = tc.getBeforeCu().right;
-            if(tc.getLocationInfoBefore() == null)
-                LineNos = Tuple.of("0","0");
-            else
-                LineNos = Tuple.of(String.valueOf(tc.getLocationInfoBefore().getStartLine()), String.valueOf(tc.getLocationInfoBefore().getStartLine()));
-            Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
-            TemplateVariableToCodeBefore = upd.getMatchReplace().map(e -> e.getMatch().getTemplateVariableMapping())
-                    .orElseGet(HashMap::new);
-            TemplateVariableToCodeAfter = upd.getMatchReplace().map(e -> e.getReplace().getTemplateVariableMapping())
-                    .orElseGet(HashMap::new);
-            isRelevant = isRelevant(upd);
-            RelevantImports = upd.getMatchReplace().map(matchReplace -> relevantImports(tc, matchReplace)).orElseGet(ArrayList::new);
+        public Instance(CodeMapping cm, Update upd, TypeChange tc, String commit, String repoName, boolean isSafe){
+            this.OriginalCompleteBefore = cm.getB4().replace("\n","");
+            this.OriginalCompleteAfter = cm.getAfter().replace("\n","");
+            this.Before = upd.getBeforeStr().replace("\n","");
+            this.After = upd.getAfterStr().replace("\n","");
+            this.Project = repoName;
+            this.Commit = commit;
+            this.CompilationUnit = tc.getBeforeCu().right;
+            this.isSafe = isSafe;
+            this.LineNos = tc.getLocationInfoBefore() == null ? Tuple.of(0,0)
+                    : Tuple.of(tc.getLocationInfoBefore().getStartLine(),tc.getLocationInfoAfter().getStartLine());
+            this.Names = Tuple.of(tc.getBeforeName(), tc.getAfterName());
+            this.TemplateVariableToCodeBefore = upd.getMatchReplace()
+                    .map(e -> e.getMatch().getTemplateVariableMapping()).orElseGet(HashMap::new);
+            this.TemplateVariableToCodeAfter = upd.getMatchReplace()
+                    .map(e -> e.getReplace().getTemplateVariableMapping()).orElseGet(HashMap::new);
+            this.isRelevant = isRelevant(upd);
+            this.RelevantImports = upd.getMatchReplace()
+                    .map(matchReplace -> relevantImports(tc, matchReplace)).orElseGet(ArrayList::new);
 
+        }
+
+        private boolean isSafe(ASTNode before, ASTNode after){
+            LowerCaseIdentifiers v1= new LowerCaseIdentifiers(), v2 = new LowerCaseIdentifiers();
+            before.accept(v1);
+            after.accept(v2);
+            ImmutableSet<String> varIdentifiers1 = Sets.difference(v1.identifiers, v1.methodNames).immutableCopy(),
+                    varIdentifiers2 = Sets.difference(v2.identifiers, v2.methodNames).immutableCopy();
+            return Sets.difference(varIdentifiers2, varIdentifiers1).isEmpty()
+                    && Sets.difference(varIdentifiers1, varIdentifiers2).isEmpty()
+                    && Sets.difference(v2.stringLiterals, v1.stringLiterals).isEmpty()
+                    && Sets.difference(v2.numberLiterals, v1.numberLiterals).isEmpty();
+        }
+
+        public boolean reComputeIsSafe(){
+
+            if (getBefore().contains("noPendingMoveIteration")){
+                System.out.println();
+            }
+            Optional<Expression> b4 = ASTUtils.getExpression(this.getBefore()), aftr = ASTUtils.getExpression(this.getAfter());
+            if (b4.isPresent() && aftr.isPresent()){
+                this.isSafe = isSafe(b4.get() , aftr.get());
+                return true;
+            }else {
+                Optional<Statement> b4Stmt  = ASTUtils.getStatement(this.getBefore()), aftrStmt = ASTUtils.getStatement(this.getBefore());
+                if (b4Stmt.isPresent() && aftrStmt.isPresent()){
+                    this.isSafe = isSafe(b4Stmt.get() , aftrStmt.get());
+                    return true;
+                }
+            }
+            return false;
         }
 
         private String isRelevant(Update upd) {
@@ -114,16 +152,12 @@ public class InferredMappings {
                     .filter(x -> CombyUtils.getPerfectMatch(":[c~\\w+[?:\\.\\w+]+]", x.getValue(), null).isPresent())
                     .filter(x -> Character.isUpperCase(x.getValue().charAt(0)))
                     .collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (a,b)->a));
-
             if(classNamesReferred.isEmpty()) return new ArrayList<>();
-
-            Map<Boolean, List<String>> relevantImports = Stream.concat(Stream.concat(tc.getAddedImportStatements().stream(), tc.getRemovedImportStatements().stream()),
-                    tc.getUnchangedImportStatements().stream())
+            Map<Boolean, List<String>> relevantImports = Stream.concat(Stream.concat(tc.getAddedImportStatements().stream(),
+                                        tc.getRemovedImportStatements().stream()), tc.getUnchangedImportStatements().stream())
                     .collect(groupingBy(x -> Character.isUpperCase(x.split("\\.")[x.split("\\.").length - 1].charAt(0))));
-
             Map<String, String> resolvedTypeNames = resolveTypeNames(classNamesReferred, relevantImports);
             return new ArrayList<>(resolvedTypeNames.values());
-
         }
 
         private boolean isReturnExpression(String originalComplete, String codeSnippet) {
@@ -151,7 +185,6 @@ public class InferredMappings {
                 return tciVarOnLHs && beforeOnRHS;
             }
             return false;
-
         }
 
 
@@ -172,7 +205,7 @@ public class InferredMappings {
             return After;
         }
 
-        public Tuple2<String,String> getLineNos() {
+        public Tuple2<Integer, Integer> getLineNos() {
             return LineNos;
         }
 
@@ -201,8 +234,8 @@ public class InferredMappings {
         }
 
         public boolean isRelevant() {
-            return true || !isRelevant.equals("Not Relevant");
-//            return !isRelevant.equals("Not Relevant");
+//            return true || !isRelevant.equals("Not Relevant");
+            return !isRelevant.equals("Not Relevant");
         }
 
         public List<String> getRelevantImports() {
@@ -215,6 +248,10 @@ public class InferredMappings {
             TemplateVariableToCodeAfter = upd.getMatchReplace().map(e -> e.getReplace().getTemplateVariableMapping())
                     .orElseGet(HashMap::new);
             isRelevant = isRelevant(upd);
+        }
+
+        public boolean isSafe() {
+            return isSafe;
         }
     }
 }

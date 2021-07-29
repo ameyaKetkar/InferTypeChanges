@@ -58,7 +58,8 @@ public class CaptureMappingsLike {
         else if(ast.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION){
             ClassInstanceCreation cic = (ClassInstanceCreation) ast;
             return List.of("new :[[c]]" + "(" + generateArgs(cic.arguments().size()) + ")",
-                        "new :[[c]]<:[ta]>" + "(" + generateArgs(cic.arguments().size()) + ")");
+                        "new :[[c]]<:[ta]>" + "(" + generateArgs(cic.arguments().size()) + ")",
+                    "new :[[c]][:[a]]");
         }
         else if(ast.getNodeType() == ASTNode.ASSIGNMENT) return List.of(":[nm]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
         else if(ast.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT)
