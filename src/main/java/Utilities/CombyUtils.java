@@ -152,8 +152,7 @@ public class CombyUtils {
                     command
             };
             Process p = Runtime.getRuntime().exec(cmd);
-            String result = new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
-            return result;
+            return new BufferedReader(new InputStreamReader(p.getInputStream())).lines().collect(joining("\n"));
         } catch (IOException e) {
             e.printStackTrace();
             return template;

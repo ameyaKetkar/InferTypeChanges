@@ -1,6 +1,7 @@
 package Utilities;
 
 import java.util.List;
+import java.util.Set;
 
 public class SnippetMappings {
 
@@ -8,7 +9,7 @@ public class SnippetMappings {
 
     public static class SnippetMapping {
         public String tc_;
-        public List<ChangesForCommit> commits;
+        public Set<ChangesForCommit> commits;
 
     }
     public static class ChangesForCommit {

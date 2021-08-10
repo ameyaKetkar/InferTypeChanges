@@ -58,7 +58,7 @@ def createHTMLTableFor(typeChange, mappingSummary, forWhat, htmlPage):
 
 excludeTcs = [('java.lang.String', 'java.util.Optional<:[tar]>')]
 
-res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultFinalExperiment"
+res = "/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/ResultFinalExperimentNew"
 if not os.path.exists(res):
     os.mkdir(res)
 
@@ -122,12 +122,12 @@ with open(os.path.join(parent(res), "finalExperimentOpUpdated.jsonl")) as c:
                                               'Instances': len(instances),
                                               'Relevant Instances': len(
                                                   [i for i in instances if i['isRelevant'] != 'Not Relevant']),
-                                              'Commits': len({inst['Commit'] for inst in instances}),
-                                              'Project': len({inst['Project'] for inst in instances}),
+                                              'Commits': list({inst['Commit'] for inst in instances}),
+                                              'Project': list({inst['Project'] for inst in instances}),
                                               'Link': "<a href=" + mapping_details + ">Link</a>"}
                 mappingSummary[mapping_id]['isChange'] = mappingSummary[mapping_id]['Match'] != mappingSummary[mapping_id]['Replace']
-                mappingSummary[mapping_id]['isGood'] = mappingSummary[mapping_id]['Commits'] > 1 and mappingSummary[mapping_id]['isChange']
-                mappingSummary[mapping_id]['isVeryGood'] = mappingSummary[mapping_id]['Project'] > 1 and mappingSummary[mapping_id]['isChange']
+                mappingSummary[mapping_id]['isGood'] = len(mappingSummary[mapping_id]['Commits']) > 1 and mappingSummary[mapping_id]['isChange'] and not not_safe
+                mappingSummary[mapping_id]['isVeryGood'] = len(mappingSummary[mapping_id]['Project']) > 1 and mappingSummary[mapping_id]['isChange'] and not not_safe
                 if mappingSummary[mapping_id]['isVeryGood'] and not not_safe:
                     veryGoodMappingCounter += 1
                 if mappingSummary[mapping_id]['isGood'] and not not_safe:
@@ -168,6 +168,7 @@ with open(os.path.join(parent(res), "finalExperimentOpUpdated.jsonl")) as c:
                                                    'Very Good Mappings': veryGoodMappingCounter,
                                                    'No. of Commits': commits_no,
                                                    'No. of Projects': projects_no,
+                                                   'MappingNum': i-u,
                                                    'Mappings': "<a href=" + mappingSummaryPath + ">" + str(i-u) + "</a>"}
 
             typeChangeID += 1

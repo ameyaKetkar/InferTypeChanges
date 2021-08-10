@@ -1,6 +1,9 @@
 package type.change;
 
-import Utilities.*;
+import Utilities.CombyUtils;
+import Utilities.InferredMappings;
+import Utilities.ResolveTypeUtil;
+import Utilities.SnippetMappings;
 import com.google.gson.Gson;
 import com.t2r.common.models.refactorings.TypeChangeAnalysisOuterClass.TypeChangeAnalysis.CodeMapping;
 import io.vavr.Tuple;
@@ -36,9 +39,9 @@ public class SnippetMode {
         SnippetMappings sn = new Gson().fromJson(Files.readString(pathToSnippets), SnippetMappings.class);
 
         for (var snp: sn.sns){
-            List<SnippetMappings.ChangesForCommit> ls = new ArrayList<>();
-            if(snp.tc_.contains("slf4j"))
-                continue;
+            Set<SnippetMappings.ChangesForCommit> ls = new HashSet<>();
+//            if(snp.tc_.contains("slf4j"))
+//                continue;
             for(var cmt : snp.commits){
 
                 ls.add(NormalizeSnippet(cmt.commit, pathToResolvedCommits, cmt, snp.tc_));
@@ -48,8 +51,10 @@ public class SnippetMode {
 
         Map<String, List<List<List<InferredMappings>>>> futures = sn.sns.parallelStream()
                 .map(snp -> Tuple.of(snp.tc_, snp.commits.stream()
-                        .flatMap(cmt -> AnalyzeSnippet(cmt.commit, pathToResolvedCommits, cmt, snp.tc_).stream()).collect(toList())))
-                .collect(groupingBy(x -> x._1(), collectingAndThen(toList(), ls -> ls.stream().flatMap(z -> z._2().stream()).collect(toList()))));
+                        .flatMap(cmt -> AnalyzeSnippet(cmt.commit, pathToResolvedCommits, cmt, snp.tc_)
+                                .stream()).collect(toList())))
+                .collect(groupingBy(Tuple2::_1, collectingAndThen(toList(), ls -> ls.stream().flatMap(z -> z._2().stream())
+                        .collect(toList()))));
 
         var jsonStr = new Gson().toJson(futures);
         Files.write(outputFile, jsonStr.getBytes(), StandardOpenOption.CREATE);
@@ -60,7 +65,8 @@ public class SnippetMode {
         Optional<ResolvedResponse> response = Try.of(() -> Files.readString(pathToResolvedCommits.resolve(commit + ".json"))).toJavaOptional()
                 .map(x -> new Gson().fromJson(x, ResolvedResponse.class));
 
-        List<RMinerUtils.TypeChange> allRefactorings = response.get().commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList());
+        List<RMinerUtils.TypeChange> allRefactorings = response.get()
+                .commits.stream().flatMap(x -> x.refactorings.stream()).filter(Objects::nonNull).collect(toList());
 
         if (allRefactorings.isEmpty()) {
             System.out.println("No Refactorings found!");
@@ -110,7 +116,7 @@ public class SnippetMode {
                 .stream()
 //                .filter(x -> x.getB4().contains("private Optional<Integer> cachedHashCode=Optional.empty();"))
                 .map(xs -> xs.stream()
-                        .filter(x -> x._1().getB4().contains("this.classTags=classTags;"))
+//                        .filter(x -> x._1().getB4().contains("this.classTags=classTags;"))
                         .map(x -> CommitMode.inferTransformation(x._1(), x._2(), allRenames, commit,"testPrj"))
                         .map(a -> a.stream().map(x -> new InferredMappings(tc, x)).collect(toList()))
                         .collect(toList()))
