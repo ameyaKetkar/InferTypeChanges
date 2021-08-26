@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.*;
 
@@ -25,8 +26,10 @@ public class CleanMappings {
 
     public static void main(String[] args) throws IOException {
         Map<Tuple2<String, String>, Map<Tuple2<String, String>, List<InferredMappings>>> updatedOp = Streams.concat(
-                Files.readAllLines(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/finalExperimentOp.jsonl"))
-                        .stream(),
+                Stream.concat(
+                        Files.readAllLines(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/finalExperimentOp.jsonl")).stream(),
+                        Files.readAllLines(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/finalExperimentOpMore.jsonl")).stream()
+                        ),
                 Files.readAllLines(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/finalExperimentOp2.jsonl"))
                         .stream())
                 .map(x -> new Gson().fromJson(x, InferredMappings.class))
@@ -58,7 +61,7 @@ public class CleanMappings {
                 .map(y -> new Gson().toJson(y, InferredMappings.class))
                 .collect(toList());
 
-        Files.write(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/finalExperimentOpUpdated.jsonl"),
+        Files.write(Path.of("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/finalExperimentOpUpdatedMore.jsonl"),
                 op, StandardOpenOption.CREATE);
 
 

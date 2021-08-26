@@ -67,11 +67,6 @@ public class Update {
         return Optional.ofNullable(matchReplace);
     }
 
-    public void addSubExplanation(Update u){
-        if(u != null)
-            this.subUpdates.add(u);
-    }
-
     public void addAllSubExplanation(List<Update> se){
         this.subUpdates.addAll(se);
     }

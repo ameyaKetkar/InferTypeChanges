@@ -74,20 +74,4 @@ public class RWUtils {
 
     }
 
-
-//    public static void writeAsJson(String fileNameTypechange, Map<Tuple2<String, String>, List<Update>> groupedByTemplates, String beforeTypeTemplate, String afterTypeTemplate) {
-//        List<String> collect = groupedByTemplates.entrySet().stream()
-//                //midnight controller .filter(x -> x.getValue().size() > 1)
-//                .map(Tuple::fromEntry)
-//                .map(x -> x.map2(y -> y.stream().map(Update::getAsInstance).collect(toList())))
-//                .map(x -> new InferredMappings(beforeTypeTemplate, afterTypeTemplate, x._1()._1(), x._1()._2(), x._2()))
-//                .map(x -> new Gson().toJson(x))
-//                .collect(toList());
-//        try {
-//            Files.write(outputFolder.resolve(fileNameTypechange), String.join("\n", collect).getBytes(), StandardOpenOption.APPEND);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
 }

@@ -25,9 +25,7 @@ public class HttpUtils {
             HttpResponse<String> response = HttpClient.newBuilder()
                     .build().send(request, HttpResponse.BodyHandlers.ofString());
             return Optional.ofNullable(response.body());
-        } catch (InterruptedException | URISyntaxException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (InterruptedException | URISyntaxException | IOException e) {
             e.printStackTrace();
         }
         return Optional.empty();

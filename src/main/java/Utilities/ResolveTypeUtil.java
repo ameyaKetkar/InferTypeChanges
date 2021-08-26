@@ -29,7 +29,8 @@ public class ResolveTypeUtil {
 
     public static Optional<Tuple2<String, String>> getResolvedTypeChangeTemplate(Tuple2<String, String> reportedTypeChange, List<TypeChange> typeChanges) {
 
-        Optional<Tuple2<String, String>> resolvedTypeChanges = Optional.of(reportedTypeChange)
+        //        resolvedTypeChanges.ifPresent(stringStringTuple2 -> cachedResolvedTypes.put(reportedTypeChange, stringStringTuple2));
+        return Optional.of(reportedTypeChange)
                 .map(x -> x.map(ResolveTypeUtil::toPerfectMatch, ResolveTypeUtil::toPerfectMatch))
                 .filter(m -> m._1().isPresent() && m._2().isPresent())
                 .flatMap(m -> Try.of(() -> new MatchReplace(m._1().get(), m._2().get(), "***"))
@@ -38,21 +39,17 @@ public class ResolveTypeUtil {
                             x.printStackTrace();
                         }).toJavaOptional())
                 .map(x -> tryToResolveTypes(x, typeChanges));
-        
-//        resolvedTypeChanges.ifPresent(stringStringTuple2 -> cachedResolvedTypes.put(reportedTypeChange, stringStringTuple2));
-        return resolvedTypeChanges;
     }
 
     private static Optional<PerfectMatch> toPerfectMatch(String t) {
 //        if(cachedCombyMatches.containsKey(t))
 //            return Optional.of(cachedCombyMatches.get(t));
-        Optional<PerfectMatch> prft_match = SYNTACTIC_TYPE_CHANGES.entrySet().stream()
+        //        prft_match.ifPresent(perfectMatch -> cachedCombyMatches.put(t, perfectMatch));
+        return SYNTACTIC_TYPE_CHANGES.entrySet().stream()
                 .flatMap(x -> getPerfectMatch(x.getValue(), t, ".xml")
                         .map(y -> new PerfectMatch(x.getKey(), x.getValue()._1(), y.getMatches().get(0), null))
                         .stream())
                 .findFirst();
-//        prft_match.ifPresent(perfectMatch -> cachedCombyMatches.put(t, perfectMatch));
-        return prft_match;
     }
 
     private static Map<String, String> getTypeNames(Map<String, String> unMatched, String template){

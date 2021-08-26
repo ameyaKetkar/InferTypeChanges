@@ -9,7 +9,7 @@ public class SnippetMappings {
 
     public static class SnippetMapping {
         public String tc_;
-        public Set<ChangesForCommit> commits;
+        public List<ChangesForCommit> commits;
 
     }
     public static class ChangesForCommit {
@@ -29,8 +29,8 @@ public class SnippetMappings {
     }
 
     public static class Mpng {
-        public String element;
         public String before;
         public String after;
+        public String element;
     }
 }

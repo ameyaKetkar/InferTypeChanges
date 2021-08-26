@@ -1,0 +1,34 @@
+notes: 
+
+
+
+(i) Add a fix for ternary operator 
+(ii) Handle lambdas
+(iii) Handle variable declarations
+(iv) handle a.b.c.d() -> AtomicLong to longadder
+(v) produce rules irrespectice of the relevance
+(vi) mapping between methods :   "Match": "ReplicationQueue(){\n  queue=new PriorityQueue<>();\n}\n",
+                        "Replace": "public ReplicationQueue(){\n  queue=new PriorityBlockingQueue<>();\n}\n",
+
+
+ maxNumThreads
+ "Match": "return Objects.equals(id,other.id) && Objects.equals(description,other.description) && Objects.equals(source,other.source)&& Objects.equals(dest,other.dest)&& Objects.equals(analysis,other.analysis)&& Objects.equals(headers,other.headers)&& Objects.equals(getModelMemoryLimit(),other.getModelMemoryLimit())&& Objects.equals(analyzedFields,other.analyzedFields)&& Objects.equals(createTime,other.createTime)&& Objects.equals(version,other.version)&& Objects.equals(allowLazyStart,other.allowLazyStart)&& Objects.equals(maxNumThreads,other.maxNumThreads);\n",
+ "Replace": "return Objects.equals(id,other.id) && Objects.equals(description,other.description) && Objects.equals(source,other.source)&& Objects.equals(dest,other.dest)&& Objects.equals(analysis,other.analysis)&& Objects.equals(headers,other.headers)&& Objects.equals(getModelMemoryLimit(),other.getModelMemoryLimit())&& Objects.equals(analyzedFields,other.analyzedFields)&& Objects.equals(createTime,other.createTime)&& Objects.equals(version,other.version)&& Objects.equals(allowLazyStart,other.allowLazyStart)&& maxNumThreads == other.maxNumThreads;\n",
+
+
+ "Match": "if (!bulkActions.equals(that.bulkActions)) return false;\n",
+"Replace": "if (bulkActions != that.bulkActions) return false;\n",
+
+
+
+  "Match": "client1.invoke(() -> MultiuserAPIDUnitTest.createCacheClient(authInit,credentials1,javaProps1,port1,port2,null,multiUser,new Integer(SecurityTestUtil.NO_EXCEPTION)));\n",
+"Replace": "client1.invoke(() -> createCacheClient(authInit,credentials1,javaProps1,port1,port2,0,multiUser,NO_EXCEPTION));\n",
+
+
+
+
+echo '() -> computeHash(new AddsToRuleKey(){
+  @AddToRuleKey Preprocessor preprocessor=preprocessorDelegate.getPreprocessor();
+  @AddToRuleKey CxxToolFlags nonIncludePathFlags=preprocessorDelegate.getNonIncludePathFlags(Optional.empty());
+}
+)' | comby '():[lc~\s*(->)\s*]:[b]' -stdin -json-lines -match-only -matcher .java 'foo'

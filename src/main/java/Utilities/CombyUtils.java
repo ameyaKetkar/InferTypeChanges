@@ -1,18 +1,23 @@
 package Utilities;
 
-import Utilities.comby.*;
+import Utilities.comby.CombyMatch;
+import Utilities.comby.CombyRewrite;
+import Utilities.comby.Environment;
 import com.google.gson.Gson;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import type.change.treeCompare.PerfectMatch;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 public class CombyUtils {
 
@@ -20,7 +25,7 @@ public class CombyUtils {
 
         template = template.replace("\\\"", "\"");
         source = source.replace("\\\"", "\"");
-
+        source = source.replace("\n","");
         try {
             boolean flag = false;
             String result = getMatchCmd(template, source, language, null);
@@ -72,9 +77,8 @@ public class CombyUtils {
         Process p = Runtime.getRuntime().exec(cmd);
 
 
-        String result = new BufferedReader(new InputStreamReader(p.getInputStream()))
+        return new BufferedReader(new InputStreamReader(p.getInputStream()))
                 .lines().collect(joining("\n"));
-        return result;
     }
 
 
@@ -107,11 +111,19 @@ public class CombyUtils {
 
 
     public static boolean isPerfectMatch(String source, CombyMatch cm) {
+        String matched = cm.getMatches().get(0).getMatched();
         return cm.getMatches().size() == 1
-                && cm.getMatches().get(0).getMatched().replace("\\n","")
-                .equals(source.replace("\\\"", "\"")
-                        .replace("\\n",""));
+                && isCodeSnippetSame(source, matched);
 
+    }
+
+    public static boolean isCodeSnippetSame(String source, String matched) {
+        return matched.replace("\\n", "")
+                .equals(source.replace("\\\"", "\"")
+                        .replace("\\n", "")) ||
+                matched.replace("\\n", "")
+                        .equals(source.replace("\\\"", "\"")
+                                .replace("\n", ""));
     }
 
     public static Optional<CombyRewrite> rewrite(String matcher, String rewrite, String source) {
@@ -133,6 +145,8 @@ public class CombyUtils {
             return Optional.empty();
         }
     }
+
+
 
 
 
@@ -183,6 +197,9 @@ public class CombyUtils {
                 })
                 .collect(toList());
 
+
+
+
     }
     
     public static class SubstitutionInput {
@@ -217,8 +234,8 @@ public class CombyUtils {
         }
     }
 
-    public static String getAsCombyVariable(String x){
-        return x.contains(":[") ? x : ":["+x+"]";
+    public static Optional<String> getAsCombyVariable(String x){
+        return Optional.of(x.contains(":[") ? x : (":[" + x + "]"));
     }
 
 

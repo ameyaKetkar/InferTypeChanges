@@ -2,6 +2,7 @@ package type.change.treeCompare;
 
 import Utilities.ASTUtils;
 import Utilities.CombyUtils;
+import Utilities.comby.CombyMatch;
 import Utilities.comby.Match;
 import Utilities.comby.Range__1;
 import io.vavr.Tuple;
@@ -56,13 +57,8 @@ public class MatchReplace {
         Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> generalization = generalize(beforep, afterp);
 
         Optional<Either<String, String>> wrapUnWrap = isWrapUnWrap(generalization._1(), generalization._2());
-
         if(wrapUnWrap.isPresent()){
-            if (wrapUnWrap.get().isLeft())
-                generalization = generalization.update2(generalization._2().updateTemplate(":["+wrapUnWrap.get().getLeft()+"]"));
-            else
-                generalization = generalization.update1(generalization._1().updateTemplate(":["+wrapUnWrap.get().get()+"]"));
-            generalization = generalize(generalization._1(), generalization._2());
+            generalization = handleWrapUnwrap(generalization, wrapUnWrap);
         }
         else {
             Optional<Either<String, String>> nxtDcmp = nextDecomposition(generalization._1(), generalization._2(), null);
@@ -73,6 +69,10 @@ public class MatchReplace {
                 else
                     generalization = generalization.update2(generalization._2().decompose(nxtDcmp.get().get()).orElse(generalization._2()));
                 generalization = generalize(generalization._1(), generalization._2());
+                wrapUnWrap = isWrapUnWrap(generalization._1(), generalization._2());
+                if(wrapUnWrap.isPresent()){
+                    generalization = handleWrapUnwrap(generalization, wrapUnWrap);
+                }
                 nxtDcmp = nextDecomposition(generalization._1(), generalization._2(), nxtDcmp.get());
                 i -= 1;
             }
@@ -86,9 +86,9 @@ public class MatchReplace {
 
         BiPredicate<Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>>, String> isTheVariable =
                 (gen,varName) -> (gen._1().getTemplateVariableMapping().get(varName).equals(beforeName) &&
-                        gen._2().getTemplateVariableMapping().get(varName).equals(beforeName)) ||
-                        (gen._1().getTemplateVariableMapping().get(varName).endsWith("." + beforeName) &&
-                        gen._2().getTemplateVariableMapping().get(varName).endsWith("." + beforeName));
+                        gen._2().getTemplateVariableMapping().get(varName).equals(beforeName));
+//                        || (gen._1().getTemplateVariableMapping().get(varName).endsWith("." + beforeName) &&
+//                        gen._2().getTemplateVariableMapping().get(varName).endsWith("." + beforeName));
 
         Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> finalGeneralization = generalization;
 
@@ -102,9 +102,20 @@ public class MatchReplace {
         return generalization;
     }
 
+    private Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> handleWrapUnwrap(Tuple3<PerfectMatch, PerfectMatch, Map<String, List<String>>> generalization, Optional<Either<String, String>> wrapUnWrap) throws T2RLearnerException {
+        if (wrapUnWrap.get().isLeft())
+            generalization = generalization.update2(generalization._2().updateTemplate(":["+ wrapUnWrap.get().getLeft()+"]"));
+        else
+            generalization = generalization.update1(generalization._1().updateTemplate(":["+ wrapUnWrap.get().get()+"]"));
+        generalization = generalize(generalization._1(), generalization._2());
+        return generalization;
+    }
+
     private PerfectMatch specialize(PerfectMatch match, Map<String, String> unMatched) throws T2RLearnerException {
         return match.updateTemplate(CombyUtils.substitute(match.getTemplate(), unMatched));
     }
+
+
 
 
     public Optional<Either<String, String>> nextDecomposition(PerfectMatch before, PerfectMatch after, Either<String, String> prev) {
@@ -132,16 +143,20 @@ public class MatchReplace {
     }
 
     public Optional<Either<String, String>> isWrapUnWrap(PerfectMatch before, PerfectMatch after){
+        // check if it is already wrapped / unwrapped
+        if(before.getTemplateVariableMapping().size() == 1 || after.getTemplateVariableMapping().size() ==1) {
+            if((before.getTemplate().startsWith(":[") && before.getTemplate().endsWith("]")) ||
+                    (after.getTemplate().startsWith(":[") && after.getTemplate().endsWith("]")) )
+            return Optional.empty();
+        }
         for (var eb : before.getTemplateVariableMapping().entrySet()) {
-            if(eb.getValue().equals(after.getCodeSnippet())){
+            if(CombyUtils.isCodeSnippetSame(eb.getValue(),after.getCodeSnippet()) || CombyUtils.isCodeSnippetSame(after.getCodeSnippet(),eb.getValue()))
                 return Optional.of(Either.left(eb.getKey()));
-            }
         }
         for (var ea : after.getTemplateVariableMapping().entrySet()) {
-            if(ea.getValue().equals(before.getCodeSnippet())){
+            if(CombyUtils.isCodeSnippetSame(ea.getValue(), before.getCodeSnippet()) || CombyUtils.isCodeSnippetSame(before.getCodeSnippet(), ea.getValue()))
                 return Optional.of(Either.right(ea.getKey()));
             }
-        }
         return Optional.empty();
     }
 

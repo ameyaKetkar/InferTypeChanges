@@ -189,7 +189,7 @@ public class CommitMode {
         // If the number of tokens are too large skip
         NodeCounter nc = new NodeCounter();
         stmt_b.get().accept(nc);
-        if (nc.getCount() > 50) {
+        if (nc.getCount() > 100) {
             LOGGER.info("TOO LARGE!!!");
             return explainableUpdates;
         }

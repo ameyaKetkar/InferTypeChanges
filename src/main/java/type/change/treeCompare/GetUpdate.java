@@ -30,8 +30,8 @@ import static type.change.treeCompare.Update.getAllDescendants;
 public class GetUpdate {
 
 
-    private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesB4;
-    private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesAfter;
+//    private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesB4;
+//    private final Map<Tuple2<Integer, Integer>, Optional<PerfectMatch>> matchesAfter;
     private final CodeMapping codeMapping;
     private final TypeChange typeChange;
     private final String commit;
@@ -40,22 +40,14 @@ public class GetUpdate {
     public GetUpdate(CodeMapping codeMapping, TypeChange typeChange, String commit, String repoName) {
         this.codeMapping = codeMapping;
         this.typeChange = typeChange;
-        this.matchesB4 = new HashMap<>();
-        this.matchesAfter = new HashMap<>();
+//        this.matchesB4 = new HashMap<>();
+//        this.matchesAfter = new HashMap<>();
         this.commit = commit;
         this.repoName = repoName;
     }
 
     public boolean areEqualInText(Tree t1, Tree t2) {
         return t1.getPos() == t2.getPos() && t1.getEndPos() == t2.getEndPos();
-    }
-
-    public boolean oneToMany(ASTNode node1, ASTNode node2){
-        return false;
-    }
-
-    public boolean isInDomain(ASTNode node1, ASTNode node2){
-        return (isInDomain(node1) && isInDomain(node2)) || oneToMany(node1, node2);
     }
 
     public boolean isInDomain(ASTNode node){
@@ -77,10 +69,19 @@ public class GetUpdate {
 
         if (root1 == null || root2 == null) return null;
 
-
-        if (root1.getChildren().size() == 1 && root1.getChildren().size() == root2.getChildren().size()
-                && areEqualInText(root1, root1.getChild(0)) && areEqualInText(root2, root2.getChild(0))) {
-            return getUpdate(before, after, root1.getChild(0), root2.getChild(0));
+        if(root1.getChildren().size() == 1 && root1.getChildren().size() == root2.getChildren().size()) {
+            Tree child1 = root1.getChild(0);
+            Tree child2 = root2.getChild(0);
+            if (areEqualInText(root1, child1) && areEqualInText(root2, child2)) {
+                if (root1.getType().name.equals("ExpressionStatement") && root2.getType().name.equals("ExpressionStatement")
+                        && before.getNodeType() == ASTNode.BLOCK && after.getNodeType() == ASTNode.BLOCK
+                        && ((Block) before).statements().size() == 1 && ((Block) after).statements().size() == 1)
+                    return getUpdate(((ExpressionStatement)((Block) before).statements().get(0)).getExpression(),
+                            ((ExpressionStatement)((Block) after).statements().get(0)).getExpression(),
+                            child1, child2);
+                else
+                    return getUpdate(before, after, child1, child2);
+            }
         }
         boolean isSafe = isSafe(before, after);
 
@@ -95,7 +96,8 @@ public class GetUpdate {
                     .getOrElse(() -> getMatchReplaceCompleteDecomposition(before, after, typeChange.getBeforeName()))
 
             ;
-        } else reasonForNoMR_matchReplace = Either.left("Not an expression");
+        } else
+            reasonForNoMR_matchReplace = Either.left("Not an expression");
 
         Update upd = new Update(root1, root2, before.toString(), after.toString(),
                 reasonForNoMR_matchReplace.getOrNull(),
@@ -178,10 +180,19 @@ public class GetUpdate {
     }
 
     private List<Update> hungarianMatch(ASTNode before, ASTNode after, List<ASTNode> childrenB4, List<ASTNode> childrenAfter) {
+        if(before.toString().contains("facade")){
+            System.out.println();
+        }
         Map<ASTNode, ASTNode> exactMatches = childrenB4.stream()
                 .flatMap(x -> childrenAfter.stream().filter(y -> y.toString().equals(x.toString()))
                         .map(y -> Tuple.of(x, y)))
                 .collect(toMap(Tuple2::_1, Tuple2::_2, (a, b)->a));
+
+        childrenAfter.stream().filter(x-> x.toString().equals(before.toString()))
+                .forEach(e -> exactMatches.put(before, e));
+
+        childrenB4.stream().filter(x-> x.toString().equals(after.toString()))
+                .forEach(e -> exactMatches.put(e, after));
 
         ToIntFunction<Update> overlaps = upd -> Stream.concat(Stream.of(upd), getAllDescendants(upd))
                 .filter(i -> i.getMatchReplace().isPresent())
@@ -194,17 +205,19 @@ public class GetUpdate {
         childrenB4.sort(Comparator.comparingInt(c -> c.toString().length()).reversed());
 
         int i = 0;
-        for (var n1 : childrenB4) {
-            if (exactMatches.containsKey(n1) || n1.toString().equals(before.toString())) continue;
-            int j= 0;
-            for (var n2 : childrenAfter) {
-                if (exactMatches.containsValue(n2) || n2.toString().equals(after.toString())) continue;
-                Update upd = getUpdate(n1, n2);
-                if (upd == null) continue;
-                holeForEachPair.add(Tuple.of(n1, n2, upd, overlaps.applyAsInt(upd), i-j < 0? i -j : j -i));
-                j += 1;
+        if(!exactMatches.containsKey(before) && !exactMatches.containsValue(after)) {
+            for (var n1 : childrenB4) {
+                if (exactMatches.containsKey(n1) || n1.toString().equals(before.toString())) continue;
+                int j = 0;
+                for (var n2 : childrenAfter) {
+                    if (exactMatches.containsValue(n2) || n2.toString().equals(after.toString())) continue;
+                    Update upd = getUpdate(n1, n2);
+                    if (upd == null) continue;
+                    holeForEachPair.add(Tuple.of(n1, n2, upd, overlaps.applyAsInt(upd), i - j < 0 ? i - j : j - i));
+                    j += 1;
+                }
+                i += 1;
             }
-            i += 1;
         }
 
 
@@ -281,13 +294,9 @@ public class GetUpdate {
                                                         Tuple2<Integer, Integer> loc_aftr, ASTNode beforeNode, ASTNode afterNode, String beforeName) {
 
         Optional<PerfectMatch> explanationBefore = PerfectMatch.getMatch(beforeNode);
-//        matchesB4.put(loc_b4, explanationBefore);
         if (explanationBefore.isEmpty()) return Either.left("Could not explain Before");
 
         Optional<PerfectMatch> explanationAfter = PerfectMatch.getMatch(afterNode);
-
-//        matchesAfter.put(loc_aftr, explanationAfter);
-
         if (explanationAfter.isEmpty())
             return Either.left("Could not match after");
 
@@ -309,9 +318,9 @@ public class GetUpdate {
 
     public Either<String, MatchReplace> getMatchReplaceCompleteDecomposition(ASTNode beforeNode, ASTNode afterNode, String beforeName) {
 
-        Optional<PerfectMatch> explanationBefore = PerfectMatch.getMatch(beforeNode).map(PerfectMatch::completelyDecompose);
+        Optional<PerfectMatch> explanationBefore = PerfectMatch.getMatch(beforeNode)
+                .map(PerfectMatch::completelyDecompose);
 
-//        matchesB4.put(loc_b4, explanationBefore);
         if (explanationBefore.isEmpty()) return Either.left("Could not explain Before");
 
         Optional<PerfectMatch> explanationAfter = PerfectMatch.getMatch(afterNode).map(PerfectMatch::completelyDecompose);

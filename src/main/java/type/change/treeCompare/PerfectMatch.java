@@ -17,8 +17,10 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static Utilities.CaptureMappingsLike.*;
-import static Utilities.CombyUtils.*;
+import static Utilities.CaptureMappingsLike.getTemplatesFor;
+import static Utilities.CaptureMappingsLike.getTheUnBoundedTemplateVar;
+import static Utilities.CombyUtils.getPerfectMatch;
+import static Utilities.CombyUtils.isPerfectMatch;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -229,7 +231,7 @@ public class PerfectMatch {
     }
 
     static Optional<PerfectMatch> getMatch(ASTNode astNode) {
-        List<String> templatesFor = getTemplatesFor(astNode);
+        Set<String> templatesFor = getTemplatesFor(astNode);
         String source = astNode.toString();
         for(var template: templatesFor){
             Optional<CombyMatch> match;

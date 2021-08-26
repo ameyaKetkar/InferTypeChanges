@@ -12,7 +12,6 @@ import type.change.treeCompare.MatchReplace;
 import type.change.treeCompare.Update;
 import type.change.visitors.LowerCaseIdentifiers;
 
-import javax.swing.plaf.nimbus.State;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -29,6 +28,16 @@ public class InferredMappings {
     private final String Replace;
     private final Instance Instance;
     private final boolean noTv;
+
+
+    public InferredMappings(String beforeTypeTemplate, String afterTypeTemplate, String match, String replace, InferredMappings.Instance instance, boolean noTv){
+        BeforeTypeTemplate = beforeTypeTemplate;
+        AfterTypeTemplate = afterTypeTemplate;
+        Match = match;
+        Replace = replace;
+        Instance = instance;
+        this.noTv = noTv;
+    }
 
     public InferredMappings(Tuple2<String, String> templateBeforeAfter, Update u) {
         BeforeTypeTemplate = templateBeforeAfter._1();
@@ -114,7 +123,7 @@ public class InferredMappings {
                     && Sets.difference(v2.numberLiterals, v1.numberLiterals).isEmpty();
         }
 
-        public boolean reComputeIsSafe(){
+        public void reComputeIsSafe(){
 
             if (getBefore().contains("noPendingMoveIteration")){
                 System.out.println();
@@ -122,15 +131,12 @@ public class InferredMappings {
             Optional<Expression> b4 = ASTUtils.getExpression(this.getBefore()), aftr = ASTUtils.getExpression(this.getAfter());
             if (b4.isPresent() && aftr.isPresent()){
                 this.isSafe = isSafe(b4.get() , aftr.get());
-                return true;
             }else {
                 Optional<Statement> b4Stmt  = ASTUtils.getStatement(this.getBefore()), aftrStmt = ASTUtils.getStatement(this.getBefore());
                 if (b4Stmt.isPresent() && aftrStmt.isPresent()){
                     this.isSafe = isSafe(b4Stmt.get() , aftrStmt.get());
-                    return true;
                 }
             }
-            return false;
         }
 
         private String isRelevant(Update upd) {
@@ -234,8 +240,8 @@ public class InferredMappings {
         }
 
         public boolean isRelevant() {
-//            return true || !isRelevant.equals("Not Relevant");
-            return !isRelevant.equals("Not Relevant");
+            return true || !isRelevant.equals("Not Relevant");
+//            return !isRelevant.equals("Not Relevant");
         }
 
         public List<String> getRelevantImports() {

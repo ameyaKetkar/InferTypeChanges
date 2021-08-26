@@ -2,20 +2,18 @@ package Utilities;
 
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
-import Utilities.comby.CombyMatch;
-import org.checkerframework.common.value.qual.IntRange;
 import org.eclipse.jdt.core.dom.*;
 
-import java.util.*;
-import java.util.function.Function;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static java.util.Collections.*;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toMap;
 
 public class CaptureMappingsLike {
 
@@ -39,56 +37,80 @@ public class CaptureMappingsLike {
         return "";
     }
 
-    public static List<String> getTemplatesFor(ASTNode ast){
+    public static Set<String> getTemplatesFor(ASTNode ast){
+        if(ast.getNodeType() == ASTNode.EXPRESSION_STATEMENT){
+            return getTemplatesFor(((ExpressionStatement) ast).getExpression())
+                    .stream().map(x->x + ";").collect(Collectors.toSet());
+        }
         if(ast.getNodeType() == ASTNode.METHOD_INVOCATION){
             MethodInvocation mi = (MethodInvocation) ast;
+            Set<String> templates = new HashSet<>();
             try {
                 if (mi.getExpression()!= null && ASTNode.SIMPLE_NAME == mi.getExpression().getNodeType() && Character.isUpperCase(mi.getExpression().toString().charAt(0))) {
-                    return List.of(":[exc~([A-Z][a-z0-9]+)+].:[[c]]" + "(" + generateArgs(mi.arguments().size()) + ")",
+                    templates = Set.of(":[exc~([A-Z][a-z0-9]+)+].:[[c]]" + "(" + generateArgs(mi.arguments().size()) + ")",
                             ":[exc~([A-Z][a-z0-9]+)+].<:[ta]>:[[c]]" + "(" + generateArgs(mi.arguments().size()) + ")",
                             ":[r].:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")",
                             ":[r].<:[ta]>:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")");
+                }else {
+                    if (mi.getExpression() == null)
+                        templates = Set.of(":[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")");
+                    else
+                        templates = Set.of(":[r].:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")",
+                                ":[r].<:[ta]>:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")");
                 }
+                return templates;
             }catch (Exception e){
-                return new ArrayList<>();
+                return new HashSet<>();
             }
-            return List.of(":[r].:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")",
-                    ":[r].<:[ta]>:[[mc]]" + "(" + generateArgs(mi.arguments().size()) + ")");
+
         }
         else if(ast.getNodeType() == ASTNode.CLASS_INSTANCE_CREATION){
             ClassInstanceCreation cic = (ClassInstanceCreation) ast;
-            return List.of("new :[[c]]" + "(" + generateArgs(cic.arguments().size()) + ")",
-                        "new :[[c]]<:[ta]>" + "(" + generateArgs(cic.arguments().size()) + ")",
-                    "new :[[c]][:[a]]");
+            return Set.of("new :[[c]]" + "(" + generateArgs(cic.arguments().size()) + ")",
+                        "new :[[c]]<:[ta]>" + "(" + generateArgs(cic.arguments().size()) + ")");
         }
-        else if(ast.getNodeType() == ASTNode.ASSIGNMENT) return List.of(":[nm]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
+        else if(ast.getNodeType() == ASTNode.ARRAY_CREATION){
+            ArrayCreation cic = (ArrayCreation) ast;
+            return Set.of("new :[[c]]"+"[" + generateArgs(cic.dimensions().size()) + "]");
+        }
+        else if(ast.getNodeType() == ASTNode.ASSIGNMENT) return Set.of(":[nm]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
         else if(ast.getNodeType() == ASTNode.VARIABLE_DECLARATION_STATEMENT)
-            return List.of(":[ty:e] :[[nm1]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
+            return Set.of(":[ty:e] :[[nm1]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]",
                 ":[mod:e] :[ty:e] :[[nm2]]:[29c~\\s*(\\+|\\-|\\*|\\&)*=\\s*]:[r]");
         else if(ast.getNodeType() == ASTNode.INFIX_EXPRESSION) {
-            InfixExpression infxEpr = (InfixExpression) ast;
-            String op = infxEpr.getOperator().toString();
-//            return List.of(":[r]"+op+":[a]")
-            return List.of(":[r]:[opc~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]:[a]");
+            var infx = (InfixExpression)ast;
+            if(infx.extendedOperands().isEmpty())
+                return Set.of(":[r]:[opc~\\s*(\\|\\|)\\s*]:[a]",
+                        ":[r]:[opc~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]:[a]");
+            else
+                return Set.of(":[r]:[opc~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]:[a]" + generateOperands(infx.extendedOperands().size()));
         }
-        else if(ast.getNodeType() == ASTNode.PREFIX_EXPRESSION) return List.of(":[bc~(\\+|\\-|!)+]:[r]");
-        else if(ast.getNodeType() == ASTNode.POSTFIX_EXPRESSION) return List.of(":[r]:[bc~(\\+|\\-|!)+]");
-        else if(ast.getNodeType() == ASTNode.RETURN_STATEMENT) return List.of("return :[e]");
+        else if(ast.getNodeType() == ASTNode.PREFIX_EXPRESSION) return Set.of(":[bc~(\\+|\\-|!)+]:[r]");
+        else if(ast.getNodeType() == ASTNode.POSTFIX_EXPRESSION) return Set.of(":[r]:[bc~(\\+|\\-|!)+]");
+        else if(ast.getNodeType() == ASTNode.RETURN_STATEMENT) return Set.of("return :[e]");
         else if(ast.getNodeType() == ASTNode.LAMBDA_EXPRESSION) {
-            return List.of(generateArgs(((LambdaExpression)ast).parameters().size()) + ":[lc~\\s*(->)\\s*]:[b]");
+            int paramLen = ((LambdaExpression) ast).parameters().size();
+            if(paramLen == 0)
+                return Set.of("()" + ":[lc~\\s*(->)\\s*]:[b]");
+            return Set.of(generateArgs(paramLen) + ":[lc~\\s*(->)\\s*]:[b]");
+
         }
-        else if(ast.getNodeType() == ASTNode.CAST_EXPRESSION) return List.of("(:[t]):[ex]");
-        else if(ast.getNodeType() == ASTNode.STRING_LITERAL) return List.of(":[a~\\\".*\\\"]");
-        else if(ast.getNodeType() == ASTNode.MEMBER_REF) return List.of(":[[ty]]:::[[c]]");
-        else if(ast.getNodeType() == ASTNode.NUMBER_LITERAL) return List.of(":[n~[+-]?(\\d*\\.)?\\d+$]",
+        else if(ast.getNodeType() == ASTNode.QUALIFIED_NAME) return Set.of(":[q].:[nc]");
+        else if(ast.getNodeType() == ASTNode.CAST_EXPRESSION) return Set.of("(:[t]):[ex]");
+        else if(ast.getNodeType() == ASTNode.STRING_LITERAL) return Set.of(":[a~\\\".*\\\"]");
+        else if(ast.getNodeType() == ASTNode.MEMBER_REF) return Set.of(":[[ty]]:::[[c]]");
+        else if(ast.getNodeType() == ASTNode.NUMBER_LITERAL) return Set.of(":[n~[+-]?(\\d*\\.)?\\d+$]",
                 ":[d~[+-]?(\\d*\\.)?\\d+]:[c~(L|l|f|F)]",
                 ":[h~0[xX][0-9a-fA-F]+]",":[h~0[xX][0-9a-fA-F]+]:[c~(L|l|f|F)]");
-        else if(ast.getNodeType() == ASTNode.BOOLEAN_LITERAL) return List.of(":[st~false]",":[st~true]");
+        else if(ast.getNodeType() == ASTNode.CONDITIONAL_EXPRESSION){
+            return Set.of(":[a]?:[b]::[d]");
+        }
+        else if(ast.getNodeType() == ASTNode.BOOLEAN_LITERAL) return Set.of(":[st~false]",":[st~true]");
         else if(ast.getNodeType() == ASTNode.BLOCK){
             //TODO: Ensure that template variables do not overlap
             Block b = (Block)ast;
             if(b.statements().size() == 2){
-                List<String> templates = new ArrayList<>();
+                Set<String> templates = new HashSet<>();
                     for (var t1 :getTemplatesFor((ASTNode) b.statements().get(0))){
                         for (var t2 :getTemplatesFor((ASTNode) b.statements().get(1))){
                             templates.add("{:[sp0~\\s*]"+t1 + ":[sp1~\\s*]"+t2+":[sp2~\\s*]}");
@@ -100,10 +122,14 @@ public class CaptureMappingsLike {
                 return getTemplatesFor((ASTNode) b.statements().get(0));
             }
         }
-        return List.of(":[[id]]");
+        return Set.of(":[[id]]");
 
     }
 
+
+    public static String generateOperands(int i){
+        return IntStream.range(0,i).mapToObj(x -> ":[a"+x+"]").collect(joining(":[opc~\\s*(==|!=|&&|\\+|\\-|\\*|\\|\\|)\\s*]"));
+    }
     public static String generateArgs(int i){
         return IntStream.range(0,i).mapToObj(x -> ":[a"+x+"]").collect(joining(","));
     }
