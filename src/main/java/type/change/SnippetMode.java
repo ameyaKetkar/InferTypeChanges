@@ -96,14 +96,15 @@ public class SnippetMode {
 
 
     public static boolean isSAme(String s1, String s2) {
-        return s1.replace("\n", "").equals(s2.replace("\n", ""));
+        return s1.replace("\n", "").equals(s2.replace("\n", ""))
+                || s1.replace("\n", "").equals(s2.replace("\n", "").replace("\'",""));
     }
 
 
     public static List<List<List<InferredMappings>>> AnalyzeSnippet(String commit, Path pathToResolvedCommits, ChangesForCommit snp, String tc_, Map<String, List<List<String>>> popularRules) {
 
-//        if (!commit.equals("90662bae0c66fc62ee773b351f4fd85baa84f2ba"))
-//            return new ArrayList<>();
+        if (!commit.equals("20b05ffe6fb1a4e8f7b79f687b28fbe9fd34801f"))
+            return new ArrayList<>();
 
         Path path_to_output_file = Paths.get("/Users/ameya/Research/TypeChangeStudy/InferTypeChanges/Output/Evaluation").resolve(commit + ".json");
 
@@ -160,6 +161,10 @@ public class SnippetMode {
         for (List<Tuple2<CodeMapping, TypeChange>> mapping_granularity : getAsCodeMapping(snp, tc_, allRenames)) {
             boolean correctRewrite = false;
             EvaluationResult evaluation = null;
+
+            if(mapping_granularity.stream().noneMatch(z -> z._1().getB4().contains("new ChannelBuffer[]")))
+                continue;
+
             for (Tuple2<CodeMapping, TypeChange> m : mapping_granularity) {
                 if(isSAme(m._1().getB4(), m._1().getAfter()))
                     continue;
@@ -195,6 +200,8 @@ public class SnippetMode {
                     for (var p : relevant_popular_rules) {
                         String matcher = p._1().replace("TCIVar", "TCIVar~" + name);
                         String rewrite = p._2();
+                        //TODO: Remove the ~regex from rewrite template
+                        // 042bf228c796f5fa7c5b4b96b94e0afd7b465538 : rename fileNAme -> file
                         var isReturn = src.contains("return ");
                         Optional<String> output;
                         if (isReturn) {
@@ -264,7 +271,8 @@ public class SnippetMode {
                                 }
 
                                 for (var src : typeChangedSources) {
-                                    String matcher = rule._1().replace("TCIVar", "TCIVar~" + name);
+                                    String matcher;
+                                    matcher = rule._1().replace(":[[TCIVar]]",":[TCIVar]").replace("TCIVar", "TCIVar~" + name);
                                     String rewrite = rule._2();
                                     var isReturn = src.contains("return ");
                                     Optional<String> output;
@@ -277,6 +285,15 @@ public class SnippetMode {
                                         if (output.isPresent() && isSAme(output.get(), target)) {
                                             inferredRules.add(rule);
                                             isCorrect = true;
+                                        }else{
+                                            rm = "return :[a~!]" + matcher + ";";
+                                            rr = "return :[a~!]" + rewrite + ";";
+                                            output = CombyUtils.rewrite(rm, rr, src)
+                                                    .map(CombyRewrite::getRewrittenSource);
+                                            if (output.isPresent() && isSAme(output.get(), target)) {
+                                                inferredRules.add(rule);
+                                                isCorrect = true;
+                                            }
                                         }
                                     }
                                     if (!isCorrect) {
@@ -373,6 +390,18 @@ public class SnippetMode {
             stmtAftr = stmtAftr.replace(" log="," logger=")
                                 .replace("log =","logger =")
                                 .replace(" log;"," logger;");
+        }
+
+        if (commit.equals("efc2362d2bae0877a427ce2c29beae94118d6567")){
+            stmtAftr = stmtAftr.replace(" date="," instant=")
+                    .replace("date =","instant =")
+                    .replace(" log;"," logger;");
+        }
+
+        if (commit.equals("8d202f12589356344e26b7ca15097eec46886055")){
+            stmtAftr = stmtAftr.replace(" currDate="," instant=")
+                    .replace("currDate =","instant =")
+                    .replace(" log;"," logger;");
         }
 
 
